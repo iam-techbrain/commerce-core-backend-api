@@ -4,6 +4,7 @@ const { prisma } = require('../database/Prisma.database');
 const appConfig = require('../config/app.config');
 const { formatResponse } = require('../helpers/App.helper');
 const Logger = require('../utils/Logger.util');
+const EmailService = require('../utils/Email.util');
 
 // Initialize Razorpay SDK instance
 const razorpay = new Razorpay({
@@ -108,7 +109,7 @@ class OrderController {
             }))
           }
         },
-        include: { items: { include: { product: true } }, address: true }
+        include: { items: { include: { product: true } }, address: true, user: true }
       });
 
       return res.status(201).json(
@@ -132,25 +133,34 @@ class OrderController {
     try {
       const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
 
-      if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
-        return res.status(400).json(formatResponse(false, 'Razorpay payment verification parameters missing hain.'));
+      if (!razorpay_order_id || !razorpay_payment_id) {
+        return res.status(400).json(formatResponse(false, 'Razorpay order_id aur payment_id required hain.'));
       }
 
-      // HMAC SHA256 Signature Verification
-      const generatedSignature = crypto
-        .createHmac('sha256', appConfig.razorpay.keySecret)
-        .update(`${razorpay_order_id}|${razorpay_payment_id}`)
-        .digest('hex');
+      // Check if testing with dummy payment ID in development mode
+      const isTestDummyMode = process.env.NODE_ENV === 'development' && razorpay_payment_id.startsWith('pay_test_dummy');
 
-      if (generatedSignature !== razorpay_signature) {
-        Logger.error('Razorpay signature verification failed!');
-        return res.status(400).json(formatResponse(false, 'Payment signature verification fail ho gaya! Fraud alert.'));
+      if (!isTestDummyMode) {
+        if (!razorpay_signature) {
+          return res.status(400).json(formatResponse(false, 'razorpay_signature required hai.'));
+        }
+
+        // HMAC SHA256 Signature Verification
+        const generatedSignature = crypto
+          .createHmac('sha256', appConfig.razorpay.keySecret)
+          .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+          .digest('hex');
+
+        if (generatedSignature !== razorpay_signature) {
+          Logger.error('Razorpay signature verification failed!');
+          return res.status(400).json(formatResponse(false, 'Payment signature verification fail ho gaya! Fraud alert.'));
+        }
       }
 
       // Update Order Status in Database
       const order = await prisma.order.findUnique({
         where: { razorpayOrderId: razorpay_order_id },
-        include: { items: true }
+        include: { items: true, user: true, address: true }
       });
 
       if (!order) {
@@ -164,9 +174,9 @@ class OrderController {
           paymentStatus: 'PAID',
           orderStatus: 'PROCESSING',
           razorpayPaymentId: razorpay_payment_id,
-          razorpaySignature: razorpay_signature
+          razorpaySignature: razorpay_signature || 'TEST_DUMMY_SIGNATURE'
         },
-        include: { items: { include: { product: true } }, address: true }
+        include: { items: { include: { product: true } }, address: true, user: true }
       });
 
       // Decrement Stock for each ordered product
@@ -182,6 +192,9 @@ class OrderController {
       if (cart) {
         await prisma.cartItem.deleteMany({ where: { cartId: cart.id } });
       }
+
+      // Trigger Email Confirmation
+      await EmailService.sendOrderConfirmation(updatedOrder.user.email, updatedOrder);
 
       Logger.info(`Payment verified & Order #${order.orderNumber} successfully processed!`);
       return res.status(200).json(
@@ -257,8 +270,11 @@ class OrderController {
       const updatedOrder = await prisma.order.update({
         where: { id },
         data: { orderStatus },
-        include: { items: true, address: true }
+        include: { items: true, address: true, user: true }
       });
+
+      // Email Notification
+      await EmailService.sendOrderStatusUpdate(updatedOrder.user.email, updatedOrder.orderNumber, orderStatus);
 
       return res.status(200).json(formatResponse(true, `Order status update ho kar "${orderStatus}" ho gaya!`, updatedOrder));
     } catch (error) {
