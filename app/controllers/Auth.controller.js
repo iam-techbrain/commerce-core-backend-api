@@ -8,7 +8,7 @@ class AuthController {
   // Register Controller
   static async register(req, res, next) {
     try {
-      const { username, email, password } = req.body;
+      const { username, email, password, role } = req.body;
 
       if (!username || !email || !password) {
         return res.status(400).json(
@@ -29,11 +29,16 @@ class AuthController {
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(password, salt);
 
+      const assignedRole = (role && ['ADMIN', 'CUSTOMER', 'USER'].includes(role.toString().toUpperCase())) 
+        ? role.toString().toUpperCase() 
+        : 'CUSTOMER';
+
       const newUser = await prisma.user.create({
         data: {
           username,
           email,
-          password: hashedPassword
+          password: hashedPassword,
+          role: assignedRole
         },
         select: { id: true, username: true, email: true, role: true, createdAt: true }
       });
