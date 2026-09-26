@@ -120,6 +120,7 @@ Back-End/
 3. **Start Server**:
    ```bash
    npm start
+   npm run dev
    ```
    *The server will run on `http://localhost:5000`.*
    *Swagger Docs will be live at `http://localhost:5000/api-docs`.*

@@ -31,9 +31,16 @@ app.use(express.static(path.join(__dirname, 'public')));
 /**
  * =========================================================================
  * 📘 SWAGGER INTERACTIVE API DOCUMENTATION
+ * (Configured to display Authentication APIs right at the TOP!)
  * =========================================================================
  */
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+const swaggerUiOptions = {
+  swaggerOptions: {
+    tagsSorter: false // Preserves custom tag ordering (Authentication FIRST!)
+  }
+};
+
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, swaggerUiOptions));
 
 /**
  * =========================================================================
@@ -41,7 +48,7 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
  * =========================================================================
  */
 (async () => {
-  // Connect Databases (Mongo + Redis)
+  // Connect Databases (Prisma SQLite, Mongo, Redis)
   await initDatabases();
 
   // Root Welcome Endpoint
