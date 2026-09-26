@@ -1,0 +1,39 @@
+# ==========================================
+# 🙈 GITIGNORE FOR SAAS E-COMMERCE BACKEND
+# ==========================================
+
+# 1. Dependency Modules (Never commit node_modules)
+node_modules/
+/node_modules
+
+# 2. Environment Secrets & Keys
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# 3. Database Files (SQLite DBs & Logs)
+prisma/*.db
+prisma/*.db-journal
+*.db
+*.db-journal
+
+# 4. Media Uploads (Ignore user uploaded product/category images, but keep directory structure)
+public/uploads/*
+!public/uploads/.gitkeep
+
+# 5. System Logs & Output
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 6. OS & IDE Specific Files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo

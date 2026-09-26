@@ -1,0 +1,26 @@
+{
+  "name": "saas-ecommerce-backend",
+  "version": "1.0.0",
+  "description": "Enterprise SaaS E-Commerce Backend API built with Express, JWT, and MVC Architecture",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "@prisma/client": "5.22.0",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^2.4.0",
+    "nodemailer": "^10.0.10",
+    "pdfkit": "^0.20.2",
+    "prisma": "5.22.0",
+    "razorpay": "^2.9.8",
+    "swagger-jsdoc": "^6.3.0",
+    "swagger-ui-express": "^5.0.1"
+  }
+}
