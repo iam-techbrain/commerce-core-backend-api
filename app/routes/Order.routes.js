@@ -69,6 +69,7 @@ router.post('/create', verifyToken, OrderController.createOrder);
  *         description: Payment verified, stock decremented, and order marked PAID
  */
 router.post('/verify', verifyToken, OrderController.verifyPayment);
+router.post('/verify-payment', verifyToken, OrderController.verifyPayment);
 
 /**
  * @swagger
