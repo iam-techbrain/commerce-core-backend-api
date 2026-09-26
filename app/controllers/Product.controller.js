@@ -10,6 +10,7 @@ class ProductController {
       const limit = parseInt(req.query.limit) || 10;
       const search = req.query.search || '';
       const categoryId = req.query.categoryId ? parseInt(req.query.categoryId) : undefined;
+      const brandId = req.query.brandId ? parseInt(req.query.brandId) : undefined;
       const sortBy = req.query.sortBy || 'createdAt'; // 'price', 'name', 'createdAt'
       const sortOrder = req.query.sortOrder === 'asc' ? 'asc' : 'desc';
 
@@ -18,10 +19,12 @@ class ProductController {
       // Construct Filter Condition
       const where = {
         ...(categoryId && { categoryId }),
+        ...(brandId && { brandId }),
         ...(search && {
           OR: [
             { name: { contains: search } },
-            { description: { contains: search } }
+            { description: { contains: search } },
+            { brandName: { contains: search } }
           ]
         })
       };
@@ -35,7 +38,7 @@ class ProductController {
         skip,
         take: limit,
         orderBy: { [sortBy]: sortOrder },
-        include: { category: true }
+        include: { category: true, brand: true }
       });
 
       const totalPages = Math.ceil(totalCount / limit);
@@ -63,7 +66,7 @@ class ProductController {
       const id = parseInt(req.params.id);
       const product = await prisma.product.findUnique({
         where: { id },
-        include: { category: true, reviews: { include: { user: { select: { username: true } } } } }
+        include: { category: true, brand: true, reviews: { include: { user: { select: { username: true } } } } }
       });
 
       if (!product) {
@@ -83,7 +86,7 @@ class ProductController {
 
       const lowStockProducts = await prisma.product.findMany({
         where: { stock: { lte: threshold } },
-        include: { category: true },
+        include: { category: true, brand: true },
         orderBy: { stock: 'asc' }
       });
 
@@ -98,7 +101,7 @@ class ProductController {
   // 4. Add New Product (With Image Cleanup on Failure)
   static async create(req, res, next) {
     try {
-      const { name, sku, description, price, stock, categoryId } = req.body;
+      const { name, sku, description, price, stock, categoryId, brandId, brandName } = req.body;
 
       if (!name || !price || !categoryId) {
         deleteUploadedFile(req.file);
@@ -114,6 +117,18 @@ class ProductController {
         return res.status(404).json(formatResponse(false, 'Di gayi Category ID exist nahi karti!'));
       }
 
+      let parsedBrandId = brandId ? parseInt(brandId) : null;
+      let finalBrandName = brandName || null;
+
+      if (parsedBrandId) {
+        const brandObj = await prisma.brand.findUnique({ where: { id: parsedBrandId } });
+        if (brandObj) {
+          finalBrandName = brandObj.name;
+        } else {
+          parsedBrandId = null;
+        }
+      }
+
       const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
 
       const product = await prisma.product.create({
@@ -124,9 +139,11 @@ class ProductController {
           price: parseFloat(price),
           stock: stock ? parseInt(stock) : 0,
           imageUrl,
-          categoryId: parseInt(categoryId)
+          categoryId: parseInt(categoryId),
+          brandId: parsedBrandId,
+          brandName: finalBrandName
         },
-        include: { category: true }
+        include: { category: true, brand: true }
       });
 
       return res.status(201).json(formatResponse(true, 'Product successfully add ho gaya! 📦', product));
@@ -140,7 +157,7 @@ class ProductController {
   static async update(req, res, next) {
     try {
       const id = parseInt(req.params.id);
-      const { name, sku, description, price, stock, categoryId } = req.body;
+      const { name, sku, description, price, stock, categoryId, brandId, brandName } = req.body;
 
       const product = await prisma.product.findUnique({ where: { id } });
       if (!product) {
@@ -163,12 +180,29 @@ class ProductController {
       if (price !== undefined) updateData.price = parseFloat(price);
       if (stock !== undefined) updateData.stock = parseInt(stock);
       if (categoryId !== undefined) updateData.categoryId = parseInt(categoryId);
+      
+      if (brandId !== undefined) {
+        if (brandId === '' || brandId === null || brandId === 'null') {
+          updateData.brandId = null;
+          updateData.brandName = null;
+        } else {
+          const parsedBrandId = parseInt(brandId);
+          const brandObj = await prisma.brand.findUnique({ where: { id: parsedBrandId } });
+          if (brandObj) {
+            updateData.brandId = parsedBrandId;
+            updateData.brandName = brandObj.name;
+          }
+        }
+      } else if (brandName !== undefined) {
+        updateData.brandName = brandName;
+      }
+
       if (req.file) updateData.imageUrl = `/uploads/${req.file.filename}`;
 
       const updatedProduct = await prisma.product.update({
         where: { id },
         data: updateData,
-        include: { category: true }
+        include: { category: true, brand: true }
       });
 
       return res.status(200).json(formatResponse(true, 'Product successfully update ho gaya!', updatedProduct));
