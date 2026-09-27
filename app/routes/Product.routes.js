@@ -1,9 +1,15 @@
 const express = require('express');
 const ProductController = require('../controllers/Product.controller');
-const upload = require('../middleware/Upload.middleware');
+const { upload, uploadExcel } = require('../middleware/Upload.middleware');
 const verifyToken = require('../middleware/Auth.middleware');
 
 const router = express.Router();
+
+// Download Sample Excel Template
+router.get('/sample-template', ProductController.getSampleTemplate);
+
+// Bulk Upload Products via Excel / CSV (Max 50 products per batch, Protected)
+router.post('/bulk-upload', verifyToken, uploadExcel.single('file'), ProductController.bulkUpload);
 
 /**
  * @swagger

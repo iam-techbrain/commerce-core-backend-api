@@ -8,7 +8,10 @@ class CartController {
       where: { userId },
       include: {
         items: {
-          include: { product: { include: { category: true } } }
+          include: {
+            product: { include: { category: true } },
+            variant: true
+          }
         }
       }
     });
@@ -18,7 +21,10 @@ class CartController {
         data: { userId },
         include: {
           items: {
-            include: { product: { include: { category: true } } }
+            include: {
+              product: { include: { category: true } },
+              variant: true
+            }
           }
         }
       });
@@ -38,18 +44,34 @@ class CartController {
       let totalItems = 0;
 
       const itemsFormatted = cart.items.map((item) => {
-        const itemTotal = item.quantity * item.product.price;
+        const effectivePrice = item.variant ? item.variant.price : item.product.price;
+        const effectiveMrp = item.variant?.mrp || item.product.mrp || null;
+        const effectiveStock = item.variant ? item.variant.stock : item.product.stock;
+        const itemTotal = item.quantity * effectivePrice;
         subtotal += itemTotal;
         totalItems += item.quantity;
+
+        let parsedAttributes = null;
+        if (item.variant?.attributes) {
+          try {
+            parsedAttributes = JSON.parse(item.variant.attributes);
+          } catch (e) {
+            parsedAttributes = item.variant.attributes;
+          }
+        }
 
         return {
           id: item.id,
           productId: item.productId,
+          variantId: item.variantId || null,
+          variantTitle: item.variant ? item.variant.title : null,
+          variantAttributes: parsedAttributes,
           productName: item.product.name,
-          productImage: item.product.imageUrl,
-          price: item.product.price,
+          productImage: item.variant?.imageUrl || item.product.imageUrl,
+          price: effectivePrice,
+          mrp: effectiveMrp,
           quantity: item.quantity,
-          stockAvailable: item.product.stock,
+          stockAvailable: effectiveStock,
           itemTotal
         };
       });
@@ -67,41 +89,61 @@ class CartController {
     }
   }
 
-  // 2. Add Item to Cart (With Stock Availability Validation)
+  // 2. Add Item to Cart (With Variant & Stock Availability Validation)
   static async addItem(req, res, next) {
     try {
       const userId = parseInt(req.user.id);
-      const { productId, quantity } = req.body;
+      const { productId, quantity, variantId } = req.body;
 
       const qty = quantity ? parseInt(quantity) : 1;
       if (qty <= 0) {
         return res.status(400).json(formatResponse(false, 'Quantity 1 ya usse zyada honi chahiye.'));
       }
 
-      // Check if product exists and has enough stock
+      const parsedProductId = parseInt(productId);
+      const parsedVariantId = variantId ? parseInt(variantId) : null;
+
+      // Check if product exists
       const product = await prisma.product.findUnique({
-        where: { id: parseInt(productId) }
+        where: { id: parsedProductId }
       });
 
       if (!product) {
         return res.status(404).json(formatResponse(false, 'Product nahi mila!'));
       }
 
+      // Check if variant exists and matches product if specified
+      let variant = null;
+      if (parsedVariantId) {
+        variant = await prisma.productVariant.findFirst({
+          where: { id: parsedVariantId, productId: parsedProductId }
+        });
+        if (!variant) {
+          return res.status(404).json(formatResponse(false, 'Product Variant nahi mila!'));
+        }
+      }
+
+      const availableStock = variant ? variant.stock : product.stock;
+
       const cart = await CartController.getOrCreateCart(userId);
 
       // Check existing item in cart
       const existingItem = await prisma.cartItem.findFirst({
-        where: { cartId: cart.id, productId: parseInt(productId) }
+        where: {
+          cartId: cart.id,
+          productId: parsedProductId,
+          variantId: parsedVariantId
+        }
       });
 
       const newQty = existingItem ? existingItem.quantity + qty : qty;
 
       // 🔴 STOCK VALIDATION CHECK
-      if (newQty > product.stock) {
+      if (newQty > availableStock) {
         return res.status(400).json(
           formatResponse(
             false,
-            `Stock limit exceeded! Is product ka sirf ${product.stock} quantity available hai.`
+            `Stock limit exceeded! Is item ka sirf ${availableStock} quantity available hai.`
           )
         );
       }
@@ -115,7 +157,8 @@ class CartController {
         await prisma.cartItem.create({
           data: {
             cartId: cart.id,
-            productId: parseInt(productId),
+            productId: parsedProductId,
+            variantId: parsedVariantId,
             quantity: qty
           }
         });
@@ -142,17 +185,19 @@ class CartController {
       const cart = await CartController.getOrCreateCart(userId);
       const cartItem = await prisma.cartItem.findFirst({
         where: { id: itemId, cartId: cart.id },
-        include: { product: true }
+        include: { product: true, variant: true }
       });
 
       if (!cartItem) {
         return res.status(404).json(formatResponse(false, 'Cart item nahi mila!'));
       }
 
+      const availableStock = cartItem.variant ? cartItem.variant.stock : cartItem.product.stock;
+
       // Stock Check
-      if (qty > cartItem.product.stock) {
+      if (qty > availableStock) {
         return res.status(400).json(
-          formatResponse(false, `Stock limit exceeded! Max ${cartItem.product.stock} items available hain.`)
+          formatResponse(false, `Stock limit exceeded! Max ${availableStock} items available hain.`)
         );
       }
 

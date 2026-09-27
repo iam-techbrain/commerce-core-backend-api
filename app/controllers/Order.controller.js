@@ -35,7 +35,14 @@ class OrderController {
       // Get User Cart
       const cart = await prisma.cart.findUnique({
         where: { userId },
-        include: { items: { include: { product: true } } }
+        include: {
+          items: {
+            include: {
+              product: true,
+              variant: true
+            }
+          }
+        }
       });
 
       if (!cart || cart.items.length === 0) {
@@ -45,15 +52,21 @@ class OrderController {
       // Calculate Total Amount & Check Stock Availability
       let subtotal = 0;
       for (const item of cart.items) {
-        if (item.quantity > item.product.stock) {
+        const availableStock = item.variant ? item.variant.stock : item.product.stock;
+        const itemName = item.variant
+          ? `${item.product.name} (${item.variant.title || 'Variant'})`
+          : item.product.name;
+
+        if (item.quantity > availableStock) {
           return res.status(400).json(
             formatResponse(
               false,
-              `Product "${item.product.name}" ka stock kam hai (Available: ${item.product.stock}, Cart me: ${item.quantity}).`
+              `Product "${itemName}" ka stock kam hai (Available: ${availableStock}, Cart me: ${item.quantity}).`
             )
           );
         }
-        subtotal += item.quantity * item.product.price;
+        const effectivePrice = item.variant ? item.variant.price : item.product.price;
+        subtotal += item.quantity * effectivePrice;
       }
 
       // Coupon Discount Calculation
@@ -101,15 +114,22 @@ class OrderController {
           orderStatus: 'PENDING',
           razorpayOrderId: razorpayOrder.id,
           items: {
-            create: cart.items.map((item) => ({
-              productId: item.productId,
-              quantity: item.quantity,
-              unitPrice: item.product.price,
-              totalPrice: item.quantity * item.product.price
-            }))
+            create: cart.items.map((item) => {
+              const effectivePrice = item.variant ? item.variant.price : item.product.price;
+              const variantName = item.variant ? (item.variant.title || 'Standard') : null;
+
+              return {
+                productId: item.productId,
+                variantId: item.variantId || null,
+                variantName,
+                quantity: item.quantity,
+                unitPrice: effectivePrice,
+                totalPrice: item.quantity * effectivePrice
+              };
+            })
           }
         },
-        include: { items: { include: { product: true } }, address: true, user: true }
+        include: { items: { include: { product: true, variant: true } }, address: true, user: true }
       });
 
       return res.status(201).json(
@@ -179,8 +199,18 @@ class OrderController {
         include: { items: { include: { product: true } }, address: true, user: true }
       });
 
-      // Decrement Stock for each ordered product
+      // Decrement Stock for each ordered product and variant
       for (const item of order.items) {
+        if (item.variantId) {
+          try {
+            await prisma.productVariant.update({
+              where: { id: item.variantId },
+              data: { stock: { decrement: item.quantity } }
+            });
+          } catch (varErr) {
+            Logger.error(`Failed to decrement variant ${item.variantId} stock: ${varErr.message}`);
+          }
+        }
         await prisma.product.update({
           where: { id: item.productId },
           data: { stock: { decrement: item.quantity } }
@@ -211,7 +241,7 @@ class OrderController {
       const userId = parseInt(req.user.id);
       const orders = await prisma.order.findMany({
         where: { userId },
-        include: { items: { include: { product: true } }, address: true },
+        include: { items: { include: { product: true, variant: true } }, address: true },
         orderBy: { createdAt: 'desc' }
       });
 
@@ -229,7 +259,7 @@ class OrderController {
 
       const order = await prisma.order.findFirst({
         where: { id, userId },
-        include: { items: { include: { product: true } }, address: true }
+        include: { items: { include: { product: true, variant: true } }, address: true }
       });
 
       if (!order) {
@@ -246,7 +276,11 @@ class OrderController {
   static async getAllOrdersAdmin(req, res, next) {
     try {
       const orders = await prisma.order.findMany({
-        include: { user: { select: { username: true, email: true } }, items: { include: { product: true } }, address: true },
+        include: {
+          user: { select: { username: true, email: true } },
+          items: { include: { product: true, variant: true } },
+          address: true
+        },
         orderBy: { createdAt: 'desc' }
       });
 
@@ -270,7 +304,7 @@ class OrderController {
       const updatedOrder = await prisma.order.update({
         where: { id },
         data: { orderStatus },
-        include: { items: true, address: true, user: true }
+        include: { items: { include: { product: true, variant: true } }, address: true, user: true }
       });
 
       // Email Notification
@@ -282,7 +316,7 @@ class OrderController {
     }
   }
 
-  // 7. Cancel Order (Restores product stock!)
+  // 7. Cancel Order (Restores product and variant stock!)
   static async cancelOrder(req, res, next) {
     try {
       const userId = parseInt(req.user.id);
@@ -301,8 +335,18 @@ class OrderController {
         return res.status(400).json(formatResponse(false, `Order ko ab cancel nahi kiya ja sakta kyunki status "${order.orderStatus}" hai.`));
       }
 
-      // Restore Product Stock if order was paid or processing
+      // Restore Product & Variant Stock if order was paid or processing
       for (const item of order.items) {
+        if (item.variantId) {
+          try {
+            await prisma.productVariant.update({
+              where: { id: item.variantId },
+              data: { stock: { increment: item.quantity } }
+            });
+          } catch (varErr) {
+            Logger.error(`Failed to restore variant ${item.variantId} stock: ${varErr.message}`);
+          }
+        }
         await prisma.product.update({
           where: { id: item.productId },
           data: { stock: { increment: item.quantity } }

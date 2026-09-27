@@ -62,24 +62,45 @@ model Brand {
 }
 
 model Product {
-  id          Int        @id @default(autoincrement())
+  id          Int              @id @default(autoincrement())
   name        String
-  sku         String?    @unique
+  sku         String?          @unique
   description String?
-  price       Float
-  stock       Int        @default(0)
-  imageUrl    String?
+  mrp         Float?           // Original Strike-through MRP Price (e.g. 17999)
+  price       Float            // Actual Selling Price (e.g. 14999)
+  stock       Int              @default(0)
+  imageUrl    String?          // Primary Cover Image
+  images      String?          // JSON Array of Multiple Gallery Images: ["url1", "url2", "url3"]
+  hasVariants Boolean          @default(false)
+  variants    ProductVariant[] // List of Product Variants (Size, Color, etc.)
   categoryId  Int
-  category    Category   @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  category    Category         @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   brandId     Int?
-  brand       Brand?     @relation(fields: [brandId], references: [id], onDelete: SetNull)
+  brand       Brand?           @relation(fields: [brandId], references: [id], onDelete: SetNull)
   brandName   String?
   cartItems   CartItem[]
   orderItems  OrderItem[]
   reviews     Review[]
   wishlists   Wishlist[]
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+model ProductVariant {
+  id          Int         @id @default(autoincrement())
+  productId   Int
+  product     Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  sku         String?     @unique
+  title       String?     // e.g. "10kg", "Red / 6ft", "Grade 1 / 1180g", "UK 8"
+  attributes  String?     // Dynamic JSON: {"Weight": "10kg"} or {"Height": "6ft", "Color": "Red"} or {"Size": "UK 8"}
+  mrp         Float?      // Variant Strike-through MRP
+  price       Float       // Variant Selling Price
+  stock       Int         @default(0)
+  imageUrl    String?     // Optional Variant Specific Image (null falls back to product.imageUrl)
+  cartItems   CartItem[]
+  orderItems  OrderItem[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
 }
 
 model Cart {
@@ -92,14 +113,16 @@ model Cart {
 }
 
 model CartItem {
-  id        Int      @id @default(autoincrement())
-  cartId    Int
-  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
-  productId Int
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  quantity  Int      @default(1)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          Int             @id @default(autoincrement())
+  cartId      Int
+  cart        Cart            @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId   Int
+  product     Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variantId   Int?
+  variant     ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+  quantity    Int             @default(1)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
 }
 
 model Wishlist {
@@ -151,15 +174,18 @@ model Order {
 }
 
 model OrderItem {
-  id        Int      @id @default(autoincrement())
-  orderId   Int
-  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  productId Int
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
-  quantity  Int
-  unitPrice Float
-  totalPrice Float
-  createdAt DateTime @default(now())
+  id          Int             @id @default(autoincrement())
+  orderId     Int
+  order       Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId   Int
+  product     Product         @relation(fields: [productId], references: [id], onDelete: Restrict)
+  variantId   Int?
+  variant     ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+  variantName String?         // Snapshot of variant name at purchase e.g. "Red / 6ft"
+  quantity    Int
+  unitPrice   Float
+  totalPrice  Float
+  createdAt   DateTime        @default(now())
 }
 
 model Review {
@@ -171,4 +197,26 @@ model Review {
   rating    Int      // 1 to 5
   comment   String?
   createdAt DateTime @default(now())
+}
+
+// Master Attributes for Variants (Color, Size, Weight, Height, etc.)
+model Attribute {
+  id        Int              @id @default(autoincrement())
+  name      String           @unique // e.g. "Color", "Size", "Weight", "Height", "Thickness", "Handle"
+  slug      String?          @unique
+  values    AttributeValue[]
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+}
+
+model AttributeValue {
+  id          Int        @id @default(autoincrement())
+  attributeId Int
+  attribute   Attribute  @relation(fields: [attributeId], references: [id], onDelete: Cascade)
+  value       String     // e.g. "Red", "Blue", "UK 8", "10kg", "6ft", "Short Handle"
+  colorCode   String?    // Optional hex code like "#FF0000" if it's a color
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@unique([attributeId, value])
 }

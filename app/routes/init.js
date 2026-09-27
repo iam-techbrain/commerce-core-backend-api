@@ -11,6 +11,7 @@ const couponRoutes = require('./Coupon.routes');
 const orderRoutes = require('./Order.routes');
 const reviewRoutes = require('./Review.routes');
 const wishlistRoutes = require('./Wishlist.routes');
+const attributeRoutes = require('./Attribute.routes');
 
 const registerRoutes = (app) => {
   app.use('/api/app', appRoutes);
@@ -19,6 +20,7 @@ const registerRoutes = (app) => {
   app.use('/api/categories', categoryRoutes);
   app.use('/api/brands', brandRoutes);
   app.use('/api/products', productRoutes);
+  app.use('/api/attributes', attributeRoutes);
   app.use('/api/users', userRoutes);
   app.use('/api/addresses', addressRoutes);
   app.use('/api/cart', cartRoutes);
