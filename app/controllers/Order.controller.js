@@ -138,7 +138,7 @@ class OrderController {
       }
 
       // Check if testing with dummy payment ID in development mode
-      const isTestDummyMode = process.env.NODE_ENV === 'development' && razorpay_payment_id.startsWith('pay_test_dummy');
+      const isTestDummyMode = (appConfig.env === 'development' || !process.env.NODE_ENV || process.env.NODE_ENV === 'development') && razorpay_payment_id.startsWith('pay_test_dummy');
 
       if (!isTestDummyMode) {
         if (!razorpay_signature) {
