@@ -198,4 +198,9 @@ router.put('/:id', verifyToken, upload.single('image'), ProductController.update
  */
 router.delete('/:id', verifyToken, ProductController.delete);
 
+// Variant Management Endpoints (Protected)
+router.post('/:id/variants', verifyToken, ProductController.addVariant);
+router.put('/variants/:variantId', verifyToken, ProductController.updateVariant);
+router.delete('/variants/:variantId', verifyToken, ProductController.deleteVariant);
+
 module.exports = router;

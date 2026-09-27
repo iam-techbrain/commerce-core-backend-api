@@ -38,7 +38,7 @@ class UserController {
   static async updateUser(req, res, next) {
     try {
       const id = parseInt(req.params.id);
-      const { username, email, password } = req.body;
+      const { username, email, password, currentPassword } = req.body;
 
       const user = await prisma.user.findUnique({ where: { id } });
       if (!user) {
@@ -49,6 +49,13 @@ class UserController {
       if (username) updateData.username = username;
       if (email) updateData.email = email;
       if (password) {
+        if (!currentPassword) {
+          return res.status(400).json(formatResponse(false, 'Current password dena zaroori hai!'));
+        }
+        const isMatch = await bcrypt.compare(currentPassword, user.password);
+        if (!isMatch) {
+          return res.status(400).json(formatResponse(false, 'Current password galat hai!'));
+        }
         const salt = await bcrypt.genSalt(10);
         updateData.password = await bcrypt.hash(password, salt);
       }

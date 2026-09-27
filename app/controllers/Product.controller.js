@@ -712,6 +712,151 @@ class ProductController {
       next(error);
     }
   }
+
+  // 9. Add Variant to an Existing Product (Protected Admin)
+  static async addVariant(req, res, next) {
+    try {
+      const productId = parseInt(req.params.id);
+      const { title, attributes, mrp, price, stock, imageUrl, sku, downloadImages } = req.body;
+
+      const product = await prisma.product.findUnique({
+        where: { id: productId },
+        include: { variants: true }
+      });
+
+      if (!product) {
+        return res.status(404).json(formatResponse(false, 'Product nahi mila!'));
+      }
+
+      if (price === undefined || price === null || price === '') {
+        return res.status(400).json(formatResponse(false, 'Variant price required hai.'));
+      }
+
+      let varImage = imageUrl ? imageUrl.trim() : null;
+      const shouldDownload = downloadImages === true || downloadImages === 'true';
+      if (shouldDownload && varImage && varImage.startsWith('http')) {
+        varImage = await downloadImageToLocal(varImage);
+      }
+
+      const attrs = attributes
+        ? (typeof attributes === 'string' ? attributes : JSON.stringify(attributes))
+        : null;
+
+      const variantTitle = title || 'Standard Variant';
+      const variantSku = sku || `VAR-${productId}-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+
+      const createdVariant = await prisma.productVariant.create({
+        data: {
+          productId,
+          sku: variantSku,
+          title: variantTitle,
+          attributes: attrs,
+          mrp: mrp ? parseFloat(mrp) : null,
+          price: parseFloat(price),
+          stock: stock !== undefined ? parseInt(stock) : 0,
+          imageUrl: varImage
+        }
+      });
+
+      // Update parent product: ensure hasVariants is true and adjust total stock
+      await prisma.product.update({
+        where: { id: productId },
+        data: {
+          hasVariants: true,
+          stock: { increment: parseInt(stock || 0) }
+        }
+      });
+
+      const updatedProduct = await prisma.product.findUnique({
+        where: { id: productId },
+        include: { category: true, brand: true, variants: true }
+      });
+
+      return res.status(201).json(
+        formatResponse(true, `Variant "${variantTitle}" successfully add ho gaya! 🎉`, {
+          variant: createdVariant,
+          product: updatedProduct
+        })
+      );
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // 10. Update an Existing Variant
+  static async updateVariant(req, res, next) {
+    try {
+      const variantId = parseInt(req.params.variantId);
+      const { title, attributes, mrp, price, stock, imageUrl, sku } = req.body;
+
+      const variant = await prisma.productVariant.findUnique({
+        where: { id: variantId }
+      });
+
+      if (!variant) {
+        return res.status(404).json(formatResponse(false, 'Variant nahi mila!'));
+      }
+
+      const updateData = {};
+      if (title !== undefined) updateData.title = title;
+      if (sku !== undefined) updateData.sku = sku;
+      if (mrp !== undefined) updateData.mrp = mrp ? parseFloat(mrp) : null;
+      if (price !== undefined) updateData.price = parseFloat(price);
+      if (stock !== undefined) updateData.stock = parseInt(stock);
+      if (imageUrl !== undefined) updateData.imageUrl = imageUrl ? imageUrl.trim() : null;
+      if (attributes !== undefined) {
+        updateData.attributes = typeof attributes === 'string' ? attributes : JSON.stringify(attributes);
+      }
+
+      const updatedVariant = await prisma.productVariant.update({
+        where: { id: variantId },
+        data: updateData
+      });
+
+      return res.status(200).json(
+        formatResponse(true, 'Variant successfully update ho gaya!', updatedVariant)
+      );
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // 11. Delete a Variant
+  static async deleteVariant(req, res, next) {
+    try {
+      const variantId = parseInt(req.params.variantId);
+
+      const variant = await prisma.productVariant.findUnique({
+        where: { id: variantId }
+      });
+
+      if (!variant) {
+        return res.status(404).json(formatResponse(false, 'Variant nahi mila!'));
+      }
+
+      await prisma.productVariant.delete({
+        where: { id: variantId }
+      });
+
+      // Check if product still has variants
+      const remainingCount = await prisma.productVariant.count({
+        where: { productId: variant.productId }
+      });
+
+      if (remainingCount === 0) {
+        await prisma.product.update({
+          where: { id: variant.productId },
+          data: { hasVariants: false }
+        });
+      }
+
+      return res.status(200).json(
+        formatResponse(true, 'Variant successfully delete ho gaya!')
+      );
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 module.exports = ProductController;
