@@ -13,10 +13,9 @@ node_modules/
 .env.test.local
 .env.production.local
 
-# 3. Database Files (SQLite DBs & Logs)
-prisma/*.db
+# 3. Database Files (Allow dev.db for instant project setup)
+!prisma/dev.db
 prisma/*.db-journal
-*.db
 *.db-journal
 
 # 4. Media Uploads (Ignore user uploaded product/category images, but keep directory structure)
