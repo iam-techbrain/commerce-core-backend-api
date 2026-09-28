@@ -2,12 +2,21 @@ const { prisma } = require('../database/Prisma.database');
 const { formatResponse, deleteUploadedFile } = require('../helpers/App.helper');
 
 class CategoryController {
-  // 1. Get All Categories
+  // 1. Get All Categories (Includes subcategories count and list)
   static async getAll(req, res, next) {
     try {
       const categories = await prisma.category.findMany({
-        include: { _count: { select: { products: true } } }
+        include: {
+          subcategories: {
+            include: {
+              _count: { select: { products: true } }
+            }
+          },
+          _count: { select: { products: true, subcategories: true } }
+        },
+        orderBy: { name: 'asc' }
       });
+
       return res.status(200).json(formatResponse(true, 'Categories fetched successfully', categories));
     } catch (error) {
       next(error);
@@ -20,7 +29,15 @@ class CategoryController {
       const id = parseInt(req.params.id);
       const category = await prisma.category.findUnique({
         where: { id },
-        include: { products: true }
+        include: {
+          subcategories: {
+            include: { _count: { select: { products: true } } }
+          },
+          products: {
+            include: { brand: true, variants: true, subCategory: true }
+          },
+          _count: { select: { products: true, subcategories: true } }
+        }
       });
 
       if (!category) {
@@ -33,7 +50,7 @@ class CategoryController {
     }
   }
 
-  // 3. Add New Category (With Image Cleanup on Validation Failure)
+  // 3. Add New Category
   static async create(req, res, next) {
     try {
       const { name, description } = req.body;
@@ -66,7 +83,7 @@ class CategoryController {
     }
   }
 
-  // 4. Update / Edit Category (With Image Cleanup on Failure)
+  // 4. Update / Edit Category
   static async update(req, res, next) {
     try {
       const id = parseInt(req.params.id);
@@ -95,25 +112,36 @@ class CategoryController {
     }
   }
 
-  // 5. Delete Category (🚫 CRITICAL VALIDATION: Products Check)
+  // 5. Delete Category (Checks products & subcategories)
   static async delete(req, res, next) {
     try {
       const id = parseInt(req.params.id);
 
       const category = await prisma.category.findUnique({
         where: { id },
-        include: { _count: { select: { products: true } } }
+        include: {
+          _count: { select: { products: true, subcategories: true } }
+        }
       });
 
       if (!category) {
         return res.status(404).json(formatResponse(false, 'Category nahi mili!'));
       }
 
+      if (category._count.subcategories > 0) {
+        return res.status(400).json(
+          formatResponse(
+            false,
+            `Category delete nahi ho sakti! Is category me ${category._count.subcategories} subcategories exist karti hain. Pehle unhe delete ya move karein.`
+          )
+        );
+      }
+
       if (category._count.products > 0) {
         return res.status(400).json(
           formatResponse(
             false,
-            `Category delete nahi ho sakti! Is category me ${category._count.products} products available hain. Pehle un products ko delete ya doosri category me move karein.`
+            `Category delete nahi ho sakti! Is category me ${category._count.products} products available hain.`
           )
         );
       }

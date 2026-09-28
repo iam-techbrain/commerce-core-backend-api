@@ -2,6 +2,7 @@ const appRoutes = require('./App.routes');
 const authRoutes = require('./Auth.routes');
 const dashboardRoutes = require('./Dashboard.routes');
 const categoryRoutes = require('./Category.routes');
+const subCategoryRoutes = require('./SubCategory.routes');
 const brandRoutes = require('./Brand.routes');
 const productRoutes = require('./Product.routes');
 const userRoutes = require('./User.routes');
@@ -18,6 +19,7 @@ const registerRoutes = (app) => {
   app.use('/api/auth', authRoutes);
   app.use('/api/dashboard', dashboardRoutes);
   app.use('/api/categories', categoryRoutes);
+  app.use('/api/subcategories', subCategoryRoutes);
   app.use('/api/brands', brandRoutes);
   app.use('/api/products', productRoutes);
   app.use('/api/attributes', attributeRoutes);

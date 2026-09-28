@@ -42,10 +42,23 @@ model Address {
 }
 
 model Category {
+  id            Int           @id @default(autoincrement())
+  name          String        @unique
+  description   String?
+  imageUrl      String?
+  subcategories SubCategory[]
+  products      Product[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model SubCategory {
   id          Int       @id @default(autoincrement())
   name        String    @unique
   description String?
   imageUrl    String?
+  categoryId  Int
+  category    Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   products    Product[]
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -62,28 +75,30 @@ model Brand {
 }
 
 model Product {
-  id          Int              @id @default(autoincrement())
-  name        String
-  sku         String?          @unique
-  description String?
-  mrp         Float?           // Original Strike-through MRP Price (e.g. 17999)
-  price       Float            // Actual Selling Price (e.g. 14999)
-  stock       Int              @default(0)
-  imageUrl    String?          // Primary Cover Image
-  images      String?          // JSON Array of Multiple Gallery Images: ["url1", "url2", "url3"]
-  hasVariants Boolean          @default(false)
-  variants    ProductVariant[] // List of Product Variants (Size, Color, etc.)
-  categoryId  Int
-  category    Category         @relation(fields: [categoryId], references: [id], onDelete: Restrict)
-  brandId     Int?
-  brand       Brand?           @relation(fields: [brandId], references: [id], onDelete: SetNull)
-  brandName   String?
-  cartItems   CartItem[]
-  orderItems  OrderItem[]
-  reviews     Review[]
-  wishlists   Wishlist[]
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+  id            Int              @id @default(autoincrement())
+  name          String
+  sku           String?          @unique
+  description   String?
+  mrp           Float?           // Original Strike-through MRP Price (e.g. 17999)
+  price         Float            // Actual Selling Price (e.g. 14999)
+  stock         Int              @default(0)
+  imageUrl      String?          // Primary Cover Image
+  images        String?          // JSON Array of Multiple Gallery Images: ["url1", "url2", "url3"]
+  hasVariants   Boolean          @default(false)
+  variants      ProductVariant[] // List of Product Variants (Size, Color, etc.)
+  categoryId    Int
+  category      Category         @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  subCategoryId Int?
+  subCategory   SubCategory?     @relation(fields: [subCategoryId], references: [id], onDelete: SetNull)
+  brandId       Int?
+  brand         Brand?           @relation(fields: [brandId], references: [id], onDelete: SetNull)
+  brandName     String?
+  cartItems     CartItem[]
+  orderItems    OrderItem[]
+  reviews       Review[]
+  wishlists     Wishlist[]
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
 }
 
 model ProductVariant {

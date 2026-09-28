@@ -10,6 +10,7 @@ class ProductController {
       const limit = parseInt(req.query.limit) || 10;
       const search = req.query.search || '';
       const categoryId = req.query.categoryId ? parseInt(req.query.categoryId) : undefined;
+      const subCategoryId = req.query.subCategoryId ? parseInt(req.query.subCategoryId) : undefined;
       const brandId = req.query.brandId ? parseInt(req.query.brandId) : undefined;
       const sortBy = req.query.sortBy || 'createdAt';
       const sortOrder = req.query.sortOrder === 'asc' ? 'asc' : 'desc';
@@ -18,6 +19,7 @@ class ProductController {
 
       const where = {
         ...(categoryId && { categoryId }),
+        ...(subCategoryId && { subCategoryId }),
         ...(brandId && { brandId }),
         ...(search && {
           OR: [
@@ -35,7 +37,7 @@ class ProductController {
         skip,
         take: limit,
         orderBy: { [sortBy]: sortOrder },
-        include: { category: true, brand: true, variants: true }
+        include: { category: true, subCategory: true, brand: true, variants: true }
       });
 
       const totalPages = Math.ceil(totalCount / limit);
