@@ -241,6 +241,7 @@ class ProductController {
         price,
         stock,
         categoryId,
+        subCategoryId,
         brandId,
         brandName,
         images,
@@ -269,6 +270,13 @@ class ProductController {
       if (price !== undefined) updateData.price = parseFloat(price);
       if (stock !== undefined) updateData.stock = parseInt(stock);
       if (categoryId !== undefined) updateData.categoryId = parseInt(categoryId);
+      if (subCategoryId !== undefined) {
+        if (subCategoryId === '' || subCategoryId === null || subCategoryId === 'null') {
+          updateData.subCategoryId = null;
+        } else {
+          updateData.subCategoryId = parseInt(subCategoryId);
+        }
+      }
       if (hasVariants !== undefined) updateData.hasVariants = hasVariants === true || hasVariants === 'true';
 
       if (brandId !== undefined) {
@@ -310,7 +318,7 @@ class ProductController {
       const updatedProduct = await prisma.product.update({
         where: { id },
         data: updateData,
-        include: { category: true, brand: true, variants: true }
+        include: { category: true, subCategory: true, brand: true, variants: true }
       });
 
       return res.status(200).json(formatResponse(true, 'Product successfully update ho gaya!', updatedProduct));
