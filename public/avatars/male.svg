@@ -1,0 +1,17 @@
+<svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="50" cy="50" r="48" fill="#11362B" stroke="#D49B3A" stroke-width="3" />
+  <path d="M32 38C32 26 40 18 50 18C60 18 68 26 68 38C68 40 67 44 65 44C62 38 58 35 50 35C42 35 37 38 35 44C33 44 32 40 32 38Z" fill="#1A202C" />
+  <ellipse cx="50" cy="46" rx="17" ry="20" fill="#FBD38D" />
+  <path d="M33 34C37 24 45 20 56 22C64 24 67 30 67 36C65 32 58 29 50 29C42 29 36 31 33 34Z" fill="#2D3748" />
+  <ellipse cx="32" cy="46" rx="3.5" ry="5.5" fill="#FBD38D" />
+  <ellipse cx="68" cy="46" rx="3.5" ry="5.5" fill="#FBD38D" />
+  <ellipse cx="44" cy="44" rx="2" ry="2" fill="#2D3748" />
+  <ellipse cx="56" cy="44" rx="2" ry="2" fill="#2D3748" />
+  <path d="M41 40C43 39 46 39 47 40" stroke="#1A202C" stroke-width="1.5" stroke-linecap="round" />
+  <path d="M53 40C54 39 57 39 59 40" stroke="#1A202C" stroke-width="1.5" stroke-linecap="round" />
+  <path d="M46 54C48 56 52 56 54 54" stroke="#C05621" stroke-width="1.5" stroke-linecap="round" />
+  <rect x="45" y="62" width="10" height="9" fill="#ED8936" opacity="0.6" />
+  <path d="M20 90C22 75 32 68 44 68H56C68 68 78 75 80 90C72 96 61 100 50 100C39 100 28 96 20 90Z" fill="#0A241C" />
+  <polygon points="50,78 43,68 57,68" fill="#FFFFFF" />
+  <polygon points="50,73 47,88 50,92 53,88" fill="#D49B3A" />
+</svg>

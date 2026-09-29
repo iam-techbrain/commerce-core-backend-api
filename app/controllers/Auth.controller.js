@@ -8,11 +8,23 @@ class AuthController {
   // Register Controller
   static async register(req, res, next) {
     try {
-      const { username, email, password, role } = req.body;
+      const { username, email, password, role, gender, phone } = req.body;
 
       if (!username || !email || !password) {
         return res.status(400).json(
-          formatResponse(false, 'Please provide username, email, and password.')
+          formatResponse(false, 'Username, Email aur Password dena zaroori hai!')
+        );
+      }
+
+      if (!phone || !phone.toString().trim()) {
+        return res.status(400).json(
+          formatResponse(false, 'Mobile Number dena mandatory (zaroori) hai!')
+        );
+      }
+
+      if (!gender || !gender.toString().trim()) {
+        return res.status(400).json(
+          formatResponse(false, 'Gender (Male / Female) select karna mandatory (zaroori) hai!')
         );
       }
 
@@ -33,14 +45,21 @@ class AuthController {
         ? role.toString().toUpperCase() 
         : 'CUSTOMER';
 
+      // Auto-assign avatar matching the selected gender (.avif format)
+      const selectedGender = gender.toString().toLowerCase() === 'female' ? 'female' : 'male';
+      const assignedAvatar = selectedGender === 'female' ? '/avatars/female.avif' : '/avatars/male.avif';
+
       const newUser = await prisma.user.create({
         data: {
           username,
           email,
+          phone: phone.toString().trim(),
           password: hashedPassword,
-          role: assignedRole
+          role: assignedRole,
+          gender: selectedGender,
+          avatar: assignedAvatar
         },
-        select: { id: true, username: true, email: true, role: true, createdAt: true }
+        select: { id: true, username: true, email: true, phone: true, role: true, gender: true, avatar: true, createdAt: true }
       });
 
       return res.status(201).json(
@@ -89,7 +108,10 @@ class AuthController {
             id: user.id,
             username: user.username,
             email: user.email,
-            role: user.role
+            phone: user.phone || null,
+            role: user.role,
+            gender: user.gender || 'male',
+            avatar: user.avatar || ((user.gender || 'male').toLowerCase() === 'female' ? '/avatars/female.avif' : '/avatars/male.avif')
           }
         })
       );

@@ -82,7 +82,11 @@ class BrandController {
       const updateData = {};
       if (name) updateData.name = name;
       if (description !== undefined) updateData.description = description;
-      if (req.file) updateData.logoUrl = `/uploads/${req.file.filename}`;
+      if (req.file) {
+        updateData.logoUrl = `/uploads/${req.file.filename}`;
+      } else if (req.body.logoUrl !== undefined) {
+        updateData.logoUrl = req.body.logoUrl;
+      }
 
       const updatedBrand = await prisma.brand.update({
         where: { id },

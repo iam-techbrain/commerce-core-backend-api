@@ -98,7 +98,11 @@ class CategoryController {
       const updateData = {};
       if (name) updateData.name = name;
       if (description !== undefined) updateData.description = description;
-      if (req.file) updateData.imageUrl = `/uploads/${req.file.filename}`;
+      if (req.file) {
+        updateData.imageUrl = `/uploads/${req.file.filename}`;
+      } else if (req.body.imageUrl !== undefined) {
+        updateData.imageUrl = req.body.imageUrl;
+      }
 
       const updatedCategory = await prisma.category.update({
         where: { id },

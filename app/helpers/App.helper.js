@@ -59,24 +59,26 @@ const downloadImageToLocal = async (url) => {
     const arrayBuffer = await res.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    // Determine file extension
-    const contentType = res.headers.get('content-type') || '';
-    let ext = '.jpg';
-    if (contentType.includes('png') || url.toLowerCase().includes('.png')) ext = '.png';
-    else if (contentType.includes('webp') || url.toLowerCase().includes('.webp')) ext = '.webp';
-    else if (contentType.includes('jpeg') || url.toLowerCase().includes('.jpeg')) ext = '.jpeg';
-    else if (contentType.includes('gif') || url.toLowerCase().includes('.gif')) ext = '.gif';
-
     const uploadsDir = path.join(__dirname, '../../public/uploads');
     if (!fs.existsSync(uploadsDir)) {
       fs.mkdirSync(uploadsDir, { recursive: true });
     }
 
-    const filename = `cached_${Date.now()}_${Math.floor(Math.random() * 1000000)}${ext}`;
+    const filename = `cached_${Date.now()}_${Math.floor(Math.random() * 1000000)}.webp`;
     const filePath = path.join(uploadsDir, filename);
 
-    await fs.promises.writeFile(filePath, buffer);
-    console.log(`[Image Downloader]: Successfully downloaded & stored: /uploads/${filename}`);
+    try {
+      const sharp = require('sharp');
+      await sharp(buffer)
+        .resize({ width: 1000, height: 1000, fit: sharp.fit.inside, withoutEnlargement: true })
+        .webp({ quality: 78, effort: 4 })
+        .toFile(filePath);
+      const stats = fs.statSync(filePath);
+      console.log(`[Image Downloader]: Compressed & stored: /uploads/${filename} (${(stats.size / 1024).toFixed(1)} KB)`);
+    } catch (sharpErr) {
+      await fs.promises.writeFile(filePath, buffer);
+      console.log(`[Image Downloader]: Stored fallback: /uploads/${filename}`);
+    }
 
     return `/uploads/${filename}`;
   } catch (err) {
