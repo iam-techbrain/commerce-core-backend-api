@@ -22,9 +22,9 @@ You can visually test all 10 API modules directly from your browser:
 
 ## 💳 Razorpay Payment Gateway Credentials
 
-* **Key ID**: `rzp_test_U8x8IJzoiGUV9Q`
+* **Key ID**: `rzp_test_00000000000000`
 * **Key Secret**: Configured securely in `.env`
-* **Support Email**: `afzal@schooldigitalised.com`
+* **Support Email**: `[EMAIL_ADDRESS]`
 
 ---
 
