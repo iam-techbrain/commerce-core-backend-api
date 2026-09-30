@@ -58,7 +58,11 @@ class UserController {
           updateData.avatar = gender.toLowerCase() === 'female' ? '/avatars/female.avif' : '/avatars/male.avif';
         }
       }
-      if (avatar !== undefined) updateData.avatar = avatar;
+      if (req.file) {
+        updateData.avatar = `/uploads/${req.file.filename}`;
+      } else if (avatar !== undefined) {
+        updateData.avatar = avatar;
+      }
 
       if (password) {
         if (currentPassword) {

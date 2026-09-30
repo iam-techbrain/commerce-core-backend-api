@@ -51,8 +51,16 @@ class ProductController {
         hasPrevPage: page > 1
       };
 
+      const formattedProducts = products.map((p) => {
+        let specs = p.specifications;
+        if (specs && typeof specs === 'string') {
+          try { specs = JSON.parse(specs); } catch (e) {}
+        }
+        return { ...p, specifications: specs };
+      });
+
       return res.status(200).json(
-        formatResponse(true, 'Products fetched successfully with pagination', products, null, pagination)
+        formatResponse(true, 'Products fetched successfully with pagination', formattedProducts, null, pagination)
       );
     } catch (error) {
       next(error);
@@ -77,7 +85,12 @@ class ProductController {
         return res.status(404).json(formatResponse(false, 'Product nahi mila!'));
       }
 
-      return res.status(200).json(formatResponse(true, 'Product details fetched', product));
+      let parsedSpecs = product.specifications;
+      if (parsedSpecs && typeof parsedSpecs === 'string') {
+        try { parsedSpecs = JSON.parse(parsedSpecs); } catch (e) {}
+      }
+
+      return res.status(200).json(formatResponse(true, 'Product details fetched', { ...product, specifications: parsedSpecs }));
     } catch (error) {
       next(error);
     }
@@ -117,7 +130,10 @@ class ProductController {
         brandName,
         images,
         hasVariants,
-        variants
+        variants,
+        countryOfOrigin,
+        warranty,
+        specifications
       } = req.body;
 
       if (!name || price === undefined || !categoryId) {
@@ -173,6 +189,20 @@ class ProductController {
 
       const parsedHasVariants = hasVariants === true || hasVariants === 'true';
 
+      let specsObj = {};
+      if (specifications) {
+        try {
+          specsObj = typeof specifications === 'string' ? JSON.parse(specifications) : specifications;
+        } catch (e) {}
+      }
+      if (countryOfOrigin && !specsObj['Country of Origin']) {
+        specsObj['Country of Origin'] = countryOfOrigin;
+      }
+      if (warranty && !specsObj['Warranty']) {
+        specsObj['Warranty'] = warranty;
+      }
+      const specificationsJson = Object.keys(specsObj).length > 0 ? JSON.stringify(specsObj) : null;
+
       const product = await prisma.product.create({
         data: {
           name,
@@ -186,7 +216,8 @@ class ProductController {
           hasVariants: parsedHasVariants,
           categoryId: parseInt(categoryId),
           brandId: parsedBrandId,
-          brandName: finalBrandName
+          brandName: finalBrandName,
+          specifications: specificationsJson
         },
         include: { category: true, brand: true }
       });
@@ -245,7 +276,10 @@ class ProductController {
         brandId,
         brandName,
         images,
-        hasVariants
+        hasVariants,
+        countryOfOrigin,
+        warranty,
+        specifications
       } = req.body;
 
       const product = await prisma.product.findUnique({ where: { id } });
@@ -278,6 +312,13 @@ class ProductController {
         }
       }
       if (hasVariants !== undefined) updateData.hasVariants = hasVariants === true || hasVariants === 'true';
+      if (specifications !== undefined) {
+        let specsJson = specifications;
+        if (typeof specifications === 'object' && specifications !== null) {
+          specsJson = JSON.stringify(specifications);
+        }
+        updateData.specifications = specsJson;
+      }
 
       if (brandId !== undefined) {
         if (brandId === '' || brandId === null || brandId === 'null') {

@@ -1,6 +1,7 @@
 const express = require('express');
 const UserController = require('../controllers/User.controller');
 const verifyToken = require('../middleware/Auth.middleware');
+const upload = require('../middleware/Upload.middleware');
 
 const router = express.Router();
 
@@ -69,7 +70,7 @@ router.get('/profile', verifyToken, UserController.getProfile);
  *       200:
  *         description: User updated successfully
  */
-router.put('/:id', verifyToken, UserController.updateUser);
+router.put('/:id', verifyToken, upload.single('avatar'), UserController.updateUser);
 
 /**
  * @swagger

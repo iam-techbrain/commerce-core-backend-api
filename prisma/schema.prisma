@@ -94,7 +94,8 @@ model Product {
   subCategory   SubCategory?     @relation(fields: [subCategoryId], references: [id], onDelete: SetNull)
   brandId       Int?
   brand         Brand?           @relation(fields: [brandId], references: [id], onDelete: SetNull)
-  brandName     String?
+  brandName       String?
+  specifications  String?          // Dynamic JSON string of key-value specs: {"Country of Origin": "India", ...}
   cartItems     CartItem[]
   orderItems    OrderItem[]
   reviews       Review[]
@@ -236,4 +237,15 @@ model AttributeValue {
   updatedAt   DateTime   @updatedAt
 
   @@unique([attributeId, value])
+}
+
+// Dynamic Metadata / Lookup Groups (Country of Origin, Warranty, etc.)
+model LookupOption {
+  id        Int      @id @default(autoincrement())
+  group     String   // e.g. "Country of Origin", "Warranty"
+  value     String   // e.g. "India", "Japan", "1 Year Warranty"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([group, value])
 }
