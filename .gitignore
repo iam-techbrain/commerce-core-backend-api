@@ -18,10 +18,9 @@ node_modules/
 prisma/*.db-journal
 *.db-journal
 
-# 4. Media Uploads (Allow product catalog images for GitHub repo)
-public/uploads/*
-!public/uploads/.gitkeep
-!public/uploads/products/*
+# 4. Media Uploads (Allow all images in uploads so they show on live server)
+!public/uploads/
+!public/uploads/**
 
 # 5. System Logs & Output
 logs/
