@@ -1,3 +1,5 @@
+const fs = require('fs');
+const path = require('path');
 const { prisma } = require('../database/Prisma.database');
 const { formatResponse, deleteUploadedFile } = require('../helpers/App.helper');
 
@@ -41,7 +43,7 @@ class CategoryController {
       });
 
       if (!category) {
-        return res.status(404).json(formatResponse(false, 'Category nahi mili!'));
+        return res.status(404).json(formatResponse(false, 'Category not found!'));
       }
 
       return res.status(200).json(formatResponse(true, 'Category details fetched', category));
@@ -54,24 +56,30 @@ class CategoryController {
   static async create(req, res, next) {
     try {
       const { name, description } = req.body;
+      const cleanName = (name || '').trim();
 
-      if (!name) {
+      if (!cleanName) {
         deleteUploadedFile(req.file);
         return res.status(400).json(formatResponse(false, 'Category name is required.'));
       }
 
-      const existingCategory = await prisma.category.findUnique({ where: { name } });
-      if (existingCategory) {
+      // Case-insensitive duplicate category check
+      const allCategories = await prisma.category.findMany({ select: { id: true, name: true } });
+      const duplicateCategory = allCategories.find(
+        (c) => c.name.trim().toLowerCase() === cleanName.toLowerCase()
+      );
+
+      if (duplicateCategory) {
         deleteUploadedFile(req.file);
-        return res.status(400).json(formatResponse(false, 'A category with this name already exists!'));
+        return res.status(400).json(formatResponse(false, `A category with the name "${duplicateCategory.name}" already exists!`));
       }
 
       const imageUrl = req.file ? (req.file.relativeUrl || `/uploads/categories/${req.file.filename}`) : null;
 
       const category = await prisma.category.create({
         data: {
-          name,
-          description,
+          name: cleanName,
+          description: description ? description.trim() : null,
           imageUrl
         }
       });
@@ -96,8 +104,31 @@ class CategoryController {
       }
 
       const updateData = {};
-      if (name) updateData.name = name;
-      if (description !== undefined) updateData.description = description;
+      if (name !== undefined) {
+        const cleanName = name.trim();
+        if (!cleanName) {
+          deleteUploadedFile(req.file);
+          return res.status(400).json(formatResponse(false, 'Category name cannot be empty.'));
+        }
+
+        // Case-insensitive duplicate check excluding current category
+        const allCategories = await prisma.category.findMany({
+          where: { id: { not: id } },
+          select: { id: true, name: true }
+        });
+        const duplicateCategory = allCategories.find(
+          (c) => c.name.trim().toLowerCase() === cleanName.toLowerCase()
+        );
+
+        if (duplicateCategory) {
+          deleteUploadedFile(req.file);
+          return res.status(400).json(formatResponse(false, `Another category named "${duplicateCategory.name}" already exists!`));
+        }
+
+        updateData.name = cleanName;
+      }
+
+      if (description !== undefined) updateData.description = description ? description.trim() : null;
       if (req.file) {
         updateData.imageUrl = req.file.relativeUrl || `/uploads/categories/${req.file.filename}`;
       } else if (req.body.imageUrl !== undefined) {
@@ -148,6 +179,14 @@ class CategoryController {
             `Cannot delete category! This category contains ${category._count.products} products.`
           )
         );
+      }
+
+      // Delete associated image file from disk if local
+      if (category.imageUrl && category.imageUrl.startsWith('/uploads/categories/')) {
+        const filePath = path.join(__dirname, '../../public', category.imageUrl);
+        if (fs.existsSync(filePath)) {
+          try { fs.unlinkSync(filePath); } catch (e) {}
+        }
       }
 
       await prisma.category.delete({ where: { id } });

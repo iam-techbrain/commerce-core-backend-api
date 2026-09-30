@@ -73,9 +73,9 @@ const compressSingleFile = async (file, targetSubfolder = '', customBaseName = '
 
   if (!baseName) baseName = 'logo';
 
-  // For brands, save directly as <brandname>.webp (clean and memorable!)
-  const isBrand = targetSubfolder === 'brands';
-  const filename = isBrand
+  // For brands and categories, save directly as <name>.webp (clean and memorable!)
+  const isNamedFolder = targetSubfolder === 'brands' || targetSubfolder === 'categories';
+  const filename = isNamedFolder
     ? `${baseName}.webp`
     : `${file.fieldname || 'img'}-${baseName}-${Date.now()}-${Math.round(Math.random() * 1E6)}.webp`;
 
@@ -83,7 +83,7 @@ const compressSingleFile = async (file, targetSubfolder = '', customBaseName = '
 
   // SVG files are vectors; don't rasterize them, write directly
   if (file.mimetype === 'image/svg+xml' || ext === '.svg') {
-    const svgFilename = isBrand ? `${baseName}.svg` : `${file.fieldname || 'upload'}-${baseName}-${Date.now()}.svg`;
+    const svgFilename = isNamedFolder ? `${baseName}.svg` : `${file.fieldname || 'upload'}-${baseName}-${Date.now()}.svg`;
     const svgPath = path.join(targetDir, svgFilename);
     await fs.promises.writeFile(svgPath, file.buffer);
     const stats = fs.statSync(svgPath);
@@ -130,7 +130,8 @@ const createCompressMiddleware = (subfolder) => {
   return async (req, res, next) => {
     try {
       const folder = resolveSubfolder(req, subfolder);
-      const customBaseName = folder === 'brands' && req.body && req.body.name ? req.body.name : '';
+      const isNamed = folder === 'brands' || folder === 'categories';
+      const customBaseName = isNamed && req.body && req.body.name ? req.body.name : '';
 
       if (req.file) {
         await compressSingleFile(req.file, folder, customBaseName);
@@ -143,7 +144,7 @@ const createCompressMiddleware = (subfolder) => {
         } else if (typeof req.files === 'object') {
           for (const field of Object.keys(req.files)) {
             for (const f of req.files[field]) {
-              await compressSingleFile(f, folder);
+              await compressSingleFile(f, folder, customBaseName);
             }
           }
         }
