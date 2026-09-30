@@ -165,7 +165,7 @@ class ProductController {
       const shouldDownload = req.body.downloadImages === true || req.body.downloadImages === 'true';
 
       let imageUrl = req.file
-        ? `/uploads/${req.file.filename}`
+        ? (req.file.relativeUrl || `/uploads/products/${req.file.filename}`)
         : req.body.imageUrl || null;
 
       if (shouldDownload && imageUrl && imageUrl.startsWith('http')) {
@@ -339,7 +339,7 @@ class ProductController {
       const shouldDownload = req.body.downloadImages === true || req.body.downloadImages === 'true';
 
       if (req.file) {
-        updateData.imageUrl = `/uploads/${req.file.filename}`;
+        updateData.imageUrl = req.file.relativeUrl || `/uploads/products/${req.file.filename}`;
       } else if (req.body.imageUrl) {
         let finalImg = req.body.imageUrl;
         if (shouldDownload && finalImg.startsWith('http')) {

@@ -50,7 +50,7 @@ class BrandController {
         return res.status(400).json(formatResponse(false, 'A brand with this name already exists!'));
       }
 
-      const logoUrl = req.file ? `/uploads/${req.file.filename}` : null;
+      const logoUrl = req.file ? (req.file.relativeUrl || `/uploads/brands/${req.file.filename}`) : null;
 
       const brand = await prisma.brand.create({
         data: {
@@ -83,7 +83,7 @@ class BrandController {
       if (name) updateData.name = name;
       if (description !== undefined) updateData.description = description;
       if (req.file) {
-        updateData.logoUrl = `/uploads/${req.file.filename}`;
+        updateData.logoUrl = req.file.relativeUrl || `/uploads/brands/${req.file.filename}`;
       } else if (req.body.logoUrl !== undefined) {
         updateData.logoUrl = req.body.logoUrl;
       }

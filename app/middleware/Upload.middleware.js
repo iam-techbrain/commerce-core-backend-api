@@ -3,13 +3,21 @@ const path = require('path');
 const fs = require('fs');
 const sharp = require('sharp');
 
-// Upload directory path
-const uploadDir = path.join(__dirname, '../../public/uploads');
+// Base uploads directory path
+const baseUploadsDir = path.join(__dirname, '../../public/uploads');
 
-// Ensure upload directory exists
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
+// Ensure folder exists helper
+const ensureDirExists = (dirPath) => {
+  if (!fs.existsSync(dirPath)) {
+    fs.mkdirSync(dirPath, { recursive: true });
+  }
+};
+
+// Ensure base and standard subdirectories exist
+ensureDirExists(baseUploadsDir);
+ensureDirExists(path.join(baseUploadsDir, 'brands'));
+ensureDirExists(path.join(baseUploadsDir, 'categories'));
+ensureDirExists(path.join(baseUploadsDir, 'products'));
 
 // File Filter (Images Only: png, jpg, jpeg, webp, avif, svg)
 const fileFilter = (req, file, cb) => {
@@ -34,10 +42,29 @@ const internalMulter = multer({
 });
 
 /**
- * Compress a single image file with Sharp to WebP (~30 KB - 50 KB target)
+ * Determine subfolder based on options or request path / field name
  */
-const compressSingleFile = async (file) => {
+const resolveSubfolder = (req, explicitFolder) => {
+  if (explicitFolder) return explicitFolder;
+  const baseUrl = (req.baseUrl || req.originalUrl || '').toLowerCase();
+  if (baseUrl.includes('brand')) return 'brands';
+  if (baseUrl.includes('categor')) return 'categories';
+  if (baseUrl.includes('product')) return 'products';
+  return '';
+};
+
+/**
+ * Compress a single image file with Sharp to WebP (~20 KB - 50 KB target)
+ * and save it directly in the targeted subfolder (e.g. uploads/brands/)
+ */
+const compressSingleFile = async (file, targetSubfolder = '') => {
   if (!file || !file.buffer) return file;
+
+  const targetDir = targetSubfolder
+    ? path.join(baseUploadsDir, targetSubfolder)
+    : baseUploadsDir;
+
+  ensureDirExists(targetDir);
 
   const ext = path.extname(file.originalname).toLowerCase();
   const baseName = path.basename(file.originalname, ext).replace(/[^a-zA-Z0-9_-]/g, '');
@@ -46,21 +73,23 @@ const compressSingleFile = async (file) => {
   // SVG files are vectors; don't rasterize them, write directly
   if (file.mimetype === 'image/svg+xml' || ext === '.svg') {
     const filename = `${file.fieldname || 'upload'}-${baseName}-${uniqueSuffix}.svg`;
-    const outputPath = path.join(uploadDir, filename);
+    const outputPath = path.join(targetDir, filename);
     await fs.promises.writeFile(outputPath, file.buffer);
     const stats = fs.statSync(outputPath);
 
     file.filename = filename;
     file.path = outputPath;
-    file.destination = uploadDir;
+    file.destination = targetDir;
+    file.subfolder = targetSubfolder;
+    file.relativeUrl = targetSubfolder ? `/uploads/${targetSubfolder}/${filename}` : `/uploads/${filename}`;
     file.size = stats.size;
     return file;
   }
 
   // All bitmap images (JPG, PNG, WEBP, AVIF, etc.):
-  // Resize max dimensions to 1000px, WebP quality 78 -> reduces size down to ~30-50 KB!
+  // Resize max dimensions to 1000px, WebP quality 78 -> reduces size down to ~20-50 KB!
   const filename = `${file.fieldname || 'img'}-${baseName}-${uniqueSuffix}.webp`;
-  const outputPath = path.join(uploadDir, filename);
+  const outputPath = path.join(targetDir, filename);
 
   await sharp(file.buffer)
     .resize({
@@ -73,11 +102,13 @@ const compressSingleFile = async (file) => {
     .toFile(outputPath);
 
   const stats = fs.statSync(outputPath);
-  console.log(`⚡ [Image Compressed]: ${file.originalname} -> ${filename} (${(stats.size / 1024).toFixed(1)} KB)`);
+  console.log(`⚡ [Image Compressed]: ${file.originalname} -> ${targetSubfolder ? targetSubfolder + '/' : ''}${filename} (${(stats.size / 1024).toFixed(1)} KB)`);
 
   file.filename = filename;
   file.path = outputPath;
-  file.destination = uploadDir;
+  file.destination = targetDir;
+  file.subfolder = targetSubfolder;
+  file.relativeUrl = targetSubfolder ? `/uploads/${targetSubfolder}/${filename}` : `/uploads/${filename}`;
   file.mimetype = 'image/webp';
   file.size = stats.size;
 
@@ -85,43 +116,55 @@ const compressSingleFile = async (file) => {
 };
 
 /**
- * Middleware that intercepts multer memory upload and compresses files
+ * Middleware that intercepts multer memory upload and compresses files into designated subfolder
  */
-const compressUploadedImages = async (req, res, next) => {
-  try {
-    if (req.file) {
-      await compressSingleFile(req.file);
-    }
-    if (req.files) {
-      if (Array.isArray(req.files)) {
-        for (const f of req.files) {
-          await compressSingleFile(f);
-        }
-      } else if (typeof req.files === 'object') {
-        for (const field of Object.keys(req.files)) {
-          for (const f of req.files[field]) {
-            await compressSingleFile(f);
+const createCompressMiddleware = (subfolder) => {
+  return async (req, res, next) => {
+    try {
+      const folder = resolveSubfolder(req, subfolder);
+
+      if (req.file) {
+        await compressSingleFile(req.file, folder);
+      }
+      if (req.files) {
+        if (Array.isArray(req.files)) {
+          for (const f of req.files) {
+            await compressSingleFile(f, folder);
+          }
+        } else if (typeof req.files === 'object') {
+          for (const field of Object.keys(req.files)) {
+            for (const f of req.files[field]) {
+              await compressSingleFile(f, folder);
+            }
           }
         }
       }
+      next();
+    } catch (error) {
+      console.error('Image compression middleware error:', error);
+      next(error);
     }
-    next();
-  } catch (error) {
-    console.error('Image compression middleware error:', error);
-    next(error);
-  }
+  };
 };
 
 /**
- * Exported Upload object matching multer API with automatic Sharp compression
+ * Helper to build multer + compress middlewares for specific subfolder
  */
-const upload = {
-  single: (fieldName) => [internalMulter.single(fieldName), compressUploadedImages],
-  array: (fieldName, maxCount) => [internalMulter.array(fieldName, maxCount), compressUploadedImages],
-  fields: (fields) => [internalMulter.fields(fields), compressUploadedImages],
-  any: () => [internalMulter.any(), compressUploadedImages],
+const buildUploadHandlers = (folder = '') => ({
+  single: (fieldName) => [internalMulter.single(fieldName), createCompressMiddleware(folder)],
+  array: (fieldName, maxCount) => [internalMulter.array(fieldName, maxCount), createCompressMiddleware(folder)],
+  fields: (fields) => [internalMulter.fields(fields), createCompressMiddleware(folder)],
+  any: () => [internalMulter.any(), createCompressMiddleware(folder)],
   none: () => internalMulter.none()
-};
+});
+
+// Default auto-detecting upload handlers
+const upload = buildUploadHandlers();
+
+// Dedicated subfolder-specific upload handlers
+upload.brand = buildUploadHandlers('brands');
+upload.category = buildUploadHandlers('categories');
+upload.product = buildUploadHandlers('products');
 
 // Memory Storage Configuration for Excel / CSV Bulk Upload
 const excelFilter = (req, file, cb) => {

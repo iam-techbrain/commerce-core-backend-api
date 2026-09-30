@@ -69,7 +69,7 @@ router.get('/:id', CategoryController.getById);
  *       201:
  *         description: Category created successfully
  */
-router.post('/', verifyToken, upload.single('image'), CategoryController.create);
+router.post('/', verifyToken, upload.category.single('image'), CategoryController.create);
 
 /**
  * @swagger
@@ -102,7 +102,7 @@ router.post('/', verifyToken, upload.single('image'), CategoryController.create)
  *       200:
  *         description: Category updated successfully
  */
-router.put('/:id', verifyToken, upload.single('image'), CategoryController.update);
+router.put('/:id', verifyToken, upload.category.single('image'), CategoryController.update);
 
 /**
  * @swagger

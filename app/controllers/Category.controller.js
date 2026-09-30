@@ -66,7 +66,7 @@ class CategoryController {
         return res.status(400).json(formatResponse(false, 'A category with this name already exists!'));
       }
 
-      const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
+      const imageUrl = req.file ? (req.file.relativeUrl || `/uploads/categories/${req.file.filename}`) : null;
 
       const category = await prisma.category.create({
         data: {
@@ -99,7 +99,7 @@ class CategoryController {
       if (name) updateData.name = name;
       if (description !== undefined) updateData.description = description;
       if (req.file) {
-        updateData.imageUrl = `/uploads/${req.file.filename}`;
+        updateData.imageUrl = req.file.relativeUrl || `/uploads/categories/${req.file.filename}`;
       } else if (req.body.imageUrl !== undefined) {
         updateData.imageUrl = req.body.imageUrl;
       }

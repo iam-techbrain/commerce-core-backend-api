@@ -135,7 +135,7 @@ router.get('/:id', ProductController.getById);
  *       201:
  *         description: Product created successfully
  */
-router.post('/', verifyToken, upload.single('image'), ProductController.create);
+router.post('/', verifyToken, upload.product.single('image'), ProductController.create);
 
 /**
  * @swagger
@@ -176,7 +176,7 @@ router.post('/', verifyToken, upload.single('image'), ProductController.create);
  *       200:
  *         description: Product updated successfully
  */
-router.put('/:id', verifyToken, upload.single('image'), ProductController.update);
+router.put('/:id', verifyToken, upload.product.single('image'), ProductController.update);
 
 /**
  * @swagger
