@@ -8,7 +8,7 @@ class CouponController {
       const { code, discountType, discountValue, minOrderValue, maxDiscountAmount, usageLimit, expiryDate } = req.body;
 
       if (!code || !discountType || !discountValue || !expiryDate) {
-        return res.status(400).json(formatResponse(false, 'Code, discountType (PERCENTAGE/FIXED), discountValue aur expiryDate required hain.'));
+        return res.status(400).json(formatResponse(false, 'Code, discountType (PERCENTAGE/FIXED), discountValue, and expiryDate are required.'));
       }
 
       const existingCoupon = await prisma.coupon.findUnique({
@@ -16,7 +16,7 @@ class CouponController {
       });
 
       if (existingCoupon) {
-        return res.status(400).json(formatResponse(false, 'Is code ka coupon pehle se exist karta hai!'));
+        return res.status(400).json(formatResponse(false, 'A coupon with this code already exists!'));
       }
 
       const coupon = await prisma.coupon.create({
@@ -31,7 +31,7 @@ class CouponController {
         }
       });
 
-      return res.status(201).json(formatResponse(true, 'Coupon create ho gaya! 🎟️', coupon));
+      return res.status(201).json(formatResponse(true, 'Coupon created successfully! 🎟️', coupon));
     } catch (error) {
       next(error);
     }
@@ -43,7 +43,7 @@ class CouponController {
       const { code, cartAmount } = req.body;
 
       if (!code || cartAmount === undefined) {
-        return res.status(400).json(formatResponse(false, 'Coupon code aur cartAmount required hain.'));
+        return res.status(400).json(formatResponse(false, 'Coupon code and cartAmount are required.'));
       }
 
       const coupon = await prisma.coupon.findUnique({
@@ -51,23 +51,23 @@ class CouponController {
       });
 
       if (!coupon || !coupon.isActive) {
-        return res.status(404).json(formatResponse(false, 'Invalid ya inactive coupon code!'));
+        return res.status(404).json(formatResponse(false, 'Invalid or inactive coupon code!'));
       }
 
       // Check Expiry Date
       if (new Date() > new Date(coupon.expiryDate)) {
-        return res.status(400).json(formatResponse(false, 'Ye coupon code expire ho chuka hai!'));
+        return res.status(400).json(formatResponse(false, 'This coupon code has expired!'));
       }
 
       // Check Usage Limit
       if (coupon.timesUsed >= coupon.usageLimit) {
-        return res.status(400).json(formatResponse(false, 'Coupon usage limit khatam ho gayi hai!'));
+        return res.status(400).json(formatResponse(false, 'Coupon usage limit reached!'));
       }
 
       const amount = parseFloat(cartAmount);
       if (amount < coupon.minOrderValue) {
         return res.status(400).json(
-          formatResponse(false, `Is coupon ke liye minimum order amount ₹${coupon.minOrderValue} hona chahiye.`)
+          formatResponse(false, `Minimum order amount of ₹${coupon.minOrderValue} required for this coupon.`)
         );
       }
 
@@ -86,7 +86,7 @@ class CouponController {
       const finalAmount = amount - discountAmount;
 
       return res.status(200).json(
-        formatResponse(true, 'Coupon successfully apply ho gaya! 🎉', {
+        formatResponse(true, 'Coupon applied successfully! 🎉', {
           code: coupon.code,
           discountType: coupon.discountType,
           discountValue: coupon.discountValue,
@@ -117,7 +117,7 @@ class CouponController {
     try {
       const id = parseInt(req.params.id);
       await prisma.coupon.delete({ where: { id } });
-      return res.status(200).json(formatResponse(true, 'Coupon delete ho gaya!'));
+      return res.status(200).json(formatResponse(true, 'Coupon deleted successfully!'));
     } catch (error) {
       next(error);
     }

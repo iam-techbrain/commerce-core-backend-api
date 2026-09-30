@@ -12,7 +12,7 @@ class UserController {
       });
 
       if (!user) {
-        return res.status(404).json(formatResponse(false, 'User profile nahi milaa.'));
+        return res.status(404).json(formatResponse(false, 'User profile not found.'));
       }
 
       return res.status(200).json(formatResponse(true, 'User Profile fetched', user));
@@ -43,7 +43,7 @@ class UserController {
 
       const user = await prisma.user.findUnique({ where: { id } });
       if (!user) {
-        return res.status(404).json(formatResponse(false, 'User nahi mila!'));
+        return res.status(404).json(formatResponse(false, 'User not found!'));
       }
 
       const updateData = {};
@@ -68,7 +68,7 @@ class UserController {
         if (currentPassword) {
           const isMatch = await bcrypt.compare(currentPassword, user.password);
           if (!isMatch) {
-            return res.status(400).json(formatResponse(false, 'Current password galat hai!'));
+            return res.status(400).json(formatResponse(false, 'Current password is incorrect!'));
           }
         }
         const salt = await bcrypt.genSalt(10);
@@ -81,7 +81,7 @@ class UserController {
         select: { id: true, username: true, email: true, phone: true, role: true, gender: true, avatar: true, updatedAt: true }
       });
 
-      return res.status(200).json(formatResponse(true, 'User details update ho gayi!', updatedUser));
+      return res.status(200).json(formatResponse(true, 'User details updated successfully!', updatedUser));
     } catch (error) {
       next(error);
     }
@@ -94,12 +94,12 @@ class UserController {
 
       const user = await prisma.user.findUnique({ where: { id } });
       if (!user) {
-        return res.status(404).json(formatResponse(false, 'User nahi mila!'));
+        return res.status(404).json(formatResponse(false, 'User not found!'));
       }
 
       await prisma.user.delete({ where: { id } });
 
-      return res.status(200).json(formatResponse(true, 'User successfully delete ho gaya!'));
+      return res.status(200).json(formatResponse(true, 'User deleted successfully!'));
     } catch (error) {
       next(error);
     }

@@ -20,7 +20,7 @@ const fileFilter = (req, file, cb) => {
   if (extName && mimeType) {
     return cb(null, true);
   } else {
-    cb(new Error('Kripya sirf valid image files (JPG, PNG, WEBP, AVIF, SVG) hi upload karein!'));
+    cb(new Error('Please upload only valid image files (JPG, PNG, WEBP, AVIF, SVG)!'));
   }
 };
 
@@ -129,7 +129,7 @@ const excelFilter = (req, file, cb) => {
   if (allowedExts.test(file.originalname)) {
     return cb(null, true);
   } else {
-    cb(new Error('Kripya sirf Excel ya CSV file (.xlsx, .xls, .csv) upload karein!'));
+    cb(new Error('Please upload only Excel or CSV files (.xlsx, .xls, .csv)!'));
   }
 };
 

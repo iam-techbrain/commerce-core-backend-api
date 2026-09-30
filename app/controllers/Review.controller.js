@@ -14,7 +14,7 @@ class ReviewController {
 
       const ratingVal = parseInt(rating);
       if (ratingVal < 1 || ratingVal > 5) {
-        return res.status(400).json(formatResponse(false, 'Rating sirf 1 se 5 ke beech ho sakti hai.'));
+        return res.status(400).json(formatResponse(false, 'Rating must be between 1 and 5.'));
       }
 
       const product = await prisma.product.findUnique({
@@ -22,7 +22,7 @@ class ReviewController {
       });
 
       if (!product) {
-        return res.status(404).json(formatResponse(false, 'Product nahi mila!'));
+        return res.status(404).json(formatResponse(false, 'Product not found!'));
       }
 
       // Check if user already reviewed this product
@@ -36,7 +36,7 @@ class ReviewController {
           where: { id: existingReview.id },
           data: { rating: ratingVal, comment }
         });
-        return res.status(200).json(formatResponse(true, 'Review update ho gaya! ⭐', updatedReview));
+        return res.status(200).json(formatResponse(true, 'Review updated successfully! ⭐', updatedReview));
       }
 
       // Create new review
@@ -50,7 +50,7 @@ class ReviewController {
         include: { user: { select: { username: true } } }
       });
 
-      return res.status(201).json(formatResponse(true, 'Review successfully add ho gaya! ⭐', review));
+      return res.status(201).json(formatResponse(true, 'Review added successfully! ⭐', review));
     } catch (error) {
       next(error);
     }
@@ -95,12 +95,12 @@ class ReviewController {
       });
 
       if (!review) {
-        return res.status(404).json(formatResponse(false, 'Review nahi mila ya aapka nahi hai!'));
+        return res.status(404).json(formatResponse(false, 'Review not found or does not belong to you!'));
       }
 
       await prisma.review.delete({ where: { id } });
 
-      return res.status(200).json(formatResponse(true, 'Review delete ho gaya!'));
+      return res.status(200).json(formatResponse(true, 'Review deleted successfully!'));
     } catch (error) {
       next(error);
     }

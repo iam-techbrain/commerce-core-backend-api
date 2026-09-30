@@ -24,7 +24,7 @@ class AddressController {
       const { fullName, phone, addressLine1, addressLine2, city, state, pincode, country, isDefault } = req.body;
 
       if (!fullName || !phone || !addressLine1 || !city || !state || !pincode) {
-        return res.status(400).json(formatResponse(false, 'Kripya sabhi required address fields bharein.'));
+        return res.status(400).json(formatResponse(false, 'Please fill in all required address fields.'));
       }
 
       // If set as default, reset other addresses default status
@@ -50,7 +50,7 @@ class AddressController {
         }
       });
 
-      return res.status(201).json(formatResponse(true, 'Address successfully add ho gaya! 🏡', newAddress));
+      return res.status(201).json(formatResponse(true, 'Address added successfully! 🏡', newAddress));
     } catch (error) {
       next(error);
     }
@@ -68,7 +68,7 @@ class AddressController {
       });
 
       if (!existingAddress) {
-        return res.status(404).json(formatResponse(false, 'Address nahi mila!'));
+        return res.status(404).json(formatResponse(false, 'Address not found!'));
       }
 
       if (isDefault) {
@@ -93,7 +93,7 @@ class AddressController {
         }
       });
 
-      return res.status(200).json(formatResponse(true, 'Address update ho gaya!', updatedAddress));
+      return res.status(200).json(formatResponse(true, 'Address updated successfully!', updatedAddress));
     } catch (error) {
       next(error);
     }
@@ -110,12 +110,12 @@ class AddressController {
       });
 
       if (!existingAddress) {
-        return res.status(404).json(formatResponse(false, 'Address nahi mila!'));
+        return res.status(404).json(formatResponse(false, 'Address not found!'));
       }
 
       await prisma.address.delete({ where: { id } });
 
-      return res.status(200).json(formatResponse(true, 'Address successfully delete ho gaya!'));
+      return res.status(200).json(formatResponse(true, 'Address deleted successfully!'));
     } catch (error) {
       next(error);
     }

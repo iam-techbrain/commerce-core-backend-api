@@ -12,19 +12,19 @@ class AuthController {
 
       if (!username || !email || !password) {
         return res.status(400).json(
-          formatResponse(false, 'Username, Email aur Password dena zaroori hai!')
+          formatResponse(false, 'Username, email, and password are required!')
         );
       }
 
       if (!phone || !phone.toString().trim()) {
         return res.status(400).json(
-          formatResponse(false, 'Mobile Number dena mandatory (zaroori) hai!')
+          formatResponse(false, 'Mobile number is required!')
         );
       }
 
       if (!gender || !gender.toString().trim()) {
         return res.status(400).json(
-          formatResponse(false, 'Gender (Male / Female) select karna mandatory (zaroori) hai!')
+          formatResponse(false, 'Please select gender (Male / Female)!')
         );
       }
 
@@ -34,7 +34,7 @@ class AuthController {
 
       if (existingUser) {
         return res.status(400).json(
-          formatResponse(false, 'Email ya Username pehle se registered hai!')
+          formatResponse(false, 'Email or username is already registered!')
         );
       }
 

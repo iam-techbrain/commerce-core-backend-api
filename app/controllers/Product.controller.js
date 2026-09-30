@@ -82,7 +82,7 @@ class ProductController {
       });
 
       if (!product) {
-        return res.status(404).json(formatResponse(false, 'Product nahi mila!'));
+        return res.status(404).json(formatResponse(false, 'Product not found!'));
       }
 
       let parsedSpecs = product.specifications;
@@ -138,7 +138,7 @@ class ProductController {
 
       if (!name || price === undefined || !categoryId) {
         deleteUploadedFile(req.file);
-        return res.status(400).json(formatResponse(false, 'Product name, price aur categoryId required hain.'));
+        return res.status(400).json(formatResponse(false, 'Product name, price, and categoryId are required.'));
       }
 
       const categoryExists = await prisma.category.findUnique({
@@ -147,7 +147,7 @@ class ProductController {
 
       if (!categoryExists) {
         deleteUploadedFile(req.file);
-        return res.status(404).json(formatResponse(false, 'Di gayi Category ID exist nahi karti!'));
+        return res.status(404).json(formatResponse(false, 'The provided Category ID does not exist!'));
       }
 
       let parsedBrandId = brandId ? parseInt(brandId) : null;
@@ -253,7 +253,7 @@ class ProductController {
         include: { category: true, brand: true, variants: true }
       });
 
-      return res.status(201).json(formatResponse(true, 'Product successfully add ho gaya! 📦', fullProduct));
+      return res.status(201).json(formatResponse(true, 'Product created successfully! 📦', fullProduct));
     } catch (error) {
       deleteUploadedFile(req.file);
       next(error);
@@ -285,14 +285,14 @@ class ProductController {
       const product = await prisma.product.findUnique({ where: { id } });
       if (!product) {
         deleteUploadedFile(req.file);
-        return res.status(404).json(formatResponse(false, 'Product nahi mila!'));
+        return res.status(404).json(formatResponse(false, 'Product not found!'));
       }
 
       if (categoryId) {
         const categoryExists = await prisma.category.findUnique({ where: { id: parseInt(categoryId) } });
         if (!categoryExists) {
           deleteUploadedFile(req.file);
-          return res.status(404).json(formatResponse(false, 'Category ID exist nahi karti!'));
+          return res.status(404).json(formatResponse(false, 'Category ID does not exist!'));
         }
       }
 
@@ -362,7 +362,7 @@ class ProductController {
         include: { category: true, subCategory: true, brand: true, variants: true }
       });
 
-      return res.status(200).json(formatResponse(true, 'Product successfully update ho gaya!', updatedProduct));
+      return res.status(200).json(formatResponse(true, 'Product updated successfully!', updatedProduct));
     } catch (error) {
       deleteUploadedFile(req.file);
       next(error);
@@ -376,12 +376,12 @@ class ProductController {
 
       const product = await prisma.product.findUnique({ where: { id } });
       if (!product) {
-        return res.status(404).json(formatResponse(false, 'Product nahi mila!'));
+        return res.status(404).json(formatResponse(false, 'Product not found!'));
       }
 
       await prisma.product.delete({ where: { id } });
 
-      return res.status(200).json(formatResponse(true, 'Product successfully delete ho gaya!'));
+      return res.status(200).json(formatResponse(true, 'Product deleted successfully!'));
     } catch (error) {
       next(error);
     }
@@ -400,11 +400,11 @@ class ProductController {
       } else if (req.body.products && Array.isArray(req.body.products)) {
         rows = req.body.products;
       } else {
-        return res.status(400).json(formatResponse(false, 'Kripya ek Excel/CSV file upload karein!'));
+        return res.status(400).json(formatResponse(false, 'Please upload an Excel/CSV file!'));
       }
 
       if (!rows || rows.length === 0) {
-        return res.status(400).json(formatResponse(false, 'Excel file me koi data nahi mila!'));
+        return res.status(400).json(formatResponse(false, 'No data found in the Excel file!'));
       }
 
       // Strict Validation: Max 50 products per batch
@@ -412,7 +412,7 @@ class ProductController {
         return res.status(400).json(
           formatResponse(
             false,
-            `Batch Limit Exceeded! Ek baar me maximum 50 products hi upload kar sakte hain. Aapki file me ${rows.length} rows hain. Kripya 50-50 ke batch me upload karein.`
+            `Batch Limit Exceeded! Maximum 50 products can be uploaded at a time. Your file contains ${rows.length} rows. Please upload in batches of 50.`
           )
         );
       }
@@ -776,11 +776,11 @@ class ProductController {
       });
 
       if (!product) {
-        return res.status(404).json(formatResponse(false, 'Product nahi mila!'));
+        return res.status(404).json(formatResponse(false, 'Product not found!'));
       }
 
       if (price === undefined || price === null || price === '') {
-        return res.status(400).json(formatResponse(false, 'Variant price required hai.'));
+        return res.status(400).json(formatResponse(false, 'Variant price is required.'));
       }
 
       let varImage = imageUrl ? imageUrl.trim() : null;
@@ -824,7 +824,7 @@ class ProductController {
       });
 
       return res.status(201).json(
-        formatResponse(true, `Variant "${variantTitle}" successfully add ho gaya! 🎉`, {
+        formatResponse(true, `Variant "${variantTitle}" added successfully! 🎉`, {
           variant: createdVariant,
           product: updatedProduct
         })
@@ -845,7 +845,7 @@ class ProductController {
       });
 
       if (!variant) {
-        return res.status(404).json(formatResponse(false, 'Variant nahi mila!'));
+        return res.status(404).json(formatResponse(false, 'Variant not found!'));
       }
 
       const updateData = {};
@@ -865,7 +865,7 @@ class ProductController {
       });
 
       return res.status(200).json(
-        formatResponse(true, 'Variant successfully update ho gaya!', updatedVariant)
+        formatResponse(true, 'Variant updated successfully!', updatedVariant)
       );
     } catch (error) {
       next(error);
@@ -882,7 +882,7 @@ class ProductController {
       });
 
       if (!variant) {
-        return res.status(404).json(formatResponse(false, 'Variant nahi mila!'));
+        return res.status(404).json(formatResponse(false, 'Variant not found!'));
       }
 
       await prisma.productVariant.delete({
@@ -902,7 +902,7 @@ class ProductController {
       }
 
       return res.status(200).json(
-        formatResponse(true, 'Variant successfully delete ho gaya!')
+        formatResponse(true, 'Variant deleted successfully!')
       );
     } catch (error) {
       next(error);

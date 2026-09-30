@@ -25,7 +25,7 @@ class BrandController {
       });
 
       if (!brand) {
-        return res.status(404).json(formatResponse(false, 'Brand nahi mila!'));
+        return res.status(404).json(formatResponse(false, 'Brand not found!'));
       }
 
       return res.status(200).json(formatResponse(true, 'Brand details fetched', brand));
@@ -41,13 +41,13 @@ class BrandController {
 
       if (!name) {
         deleteUploadedFile(req.file);
-        return res.status(400).json(formatResponse(false, 'Brand name zaroori hai.'));
+        return res.status(400).json(formatResponse(false, 'Brand name is required.'));
       }
 
       const existingBrand = await prisma.brand.findUnique({ where: { name } });
       if (existingBrand) {
         deleteUploadedFile(req.file);
-        return res.status(400).json(formatResponse(false, 'Is name ka brand pehle se exist karta hai!'));
+        return res.status(400).json(formatResponse(false, 'A brand with this name already exists!'));
       }
 
       const logoUrl = req.file ? `/uploads/${req.file.filename}` : null;
@@ -60,7 +60,7 @@ class BrandController {
         }
       });
 
-      return res.status(201).json(formatResponse(true, 'Brand successfully create ho gaya! 🏷️', brand));
+      return res.status(201).json(formatResponse(true, 'Brand created successfully! 🏷️', brand));
     } catch (error) {
       deleteUploadedFile(req.file);
       next(error);
@@ -76,7 +76,7 @@ class BrandController {
       const brand = await prisma.brand.findUnique({ where: { id } });
       if (!brand) {
         deleteUploadedFile(req.file);
-        return res.status(404).json(formatResponse(false, 'Brand nahi mila!'));
+        return res.status(404).json(formatResponse(false, 'Brand not found!'));
       }
 
       const updateData = {};
@@ -93,7 +93,7 @@ class BrandController {
         data: updateData
       });
 
-      return res.status(200).json(formatResponse(true, 'Brand successfully update ho gaya!', updatedBrand));
+      return res.status(200).json(formatResponse(true, 'Brand updated successfully!', updatedBrand));
     } catch (error) {
       deleteUploadedFile(req.file);
       next(error);
@@ -111,21 +111,21 @@ class BrandController {
       });
 
       if (!brand) {
-        return res.status(404).json(formatResponse(false, 'Brand nahi mila!'));
+        return res.status(404).json(formatResponse(false, 'Brand not found!'));
       }
 
       if (brand._count.products > 0) {
         return res.status(400).json(
           formatResponse(
             false,
-            `Brand delete nahi ho sakta! Is brand me ${brand._count.products} products attached hain. Pehle un products ka brand change karein ya delete karein.`
+            `Cannot delete brand! This brand has ${brand._count.products} products attached. Please reassign or delete those products first.`
           )
         );
       }
 
       await prisma.brand.delete({ where: { id } });
 
-      return res.status(200).json(formatResponse(true, 'Brand successfully delete ho gaya!'));
+      return res.status(200).json(formatResponse(true, 'Brand deleted successfully!'));
     } catch (error) {
       next(error);
     }

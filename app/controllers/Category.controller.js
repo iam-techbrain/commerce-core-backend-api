@@ -57,13 +57,13 @@ class CategoryController {
 
       if (!name) {
         deleteUploadedFile(req.file);
-        return res.status(400).json(formatResponse(false, 'Category name zaroori hai.'));
+        return res.status(400).json(formatResponse(false, 'Category name is required.'));
       }
 
       const existingCategory = await prisma.category.findUnique({ where: { name } });
       if (existingCategory) {
         deleteUploadedFile(req.file);
-        return res.status(400).json(formatResponse(false, 'Is name ki category pehle se exist karti hai!'));
+        return res.status(400).json(formatResponse(false, 'A category with this name already exists!'));
       }
 
       const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
@@ -76,7 +76,7 @@ class CategoryController {
         }
       });
 
-      return res.status(201).json(formatResponse(true, 'Category successfully create ho gayi! 🎉', category));
+      return res.status(201).json(formatResponse(true, 'Category created successfully! 🎉', category));
     } catch (error) {
       deleteUploadedFile(req.file);
       next(error);
@@ -92,7 +92,7 @@ class CategoryController {
       const category = await prisma.category.findUnique({ where: { id } });
       if (!category) {
         deleteUploadedFile(req.file);
-        return res.status(404).json(formatResponse(false, 'Category nahi mili!'));
+        return res.status(404).json(formatResponse(false, 'Category not found!'));
       }
 
       const updateData = {};
@@ -109,7 +109,7 @@ class CategoryController {
         data: updateData
       });
 
-      return res.status(200).json(formatResponse(true, 'Category successfully update ho gayi!', updatedCategory));
+      return res.status(200).json(formatResponse(true, 'Category updated successfully!', updatedCategory));
     } catch (error) {
       deleteUploadedFile(req.file);
       next(error);
@@ -129,14 +129,14 @@ class CategoryController {
       });
 
       if (!category) {
-        return res.status(404).json(formatResponse(false, 'Category nahi mili!'));
+        return res.status(404).json(formatResponse(false, 'Category not found!'));
       }
 
       if (category._count.subcategories > 0) {
         return res.status(400).json(
           formatResponse(
             false,
-            `Category delete nahi ho sakti! Is category me ${category._count.subcategories} subcategories exist karti hain. Pehle unhe delete ya move karein.`
+            `Cannot delete category! This category contains ${category._count.subcategories} subcategories. Please reassign or delete them first.`
           )
         );
       }
@@ -145,14 +145,14 @@ class CategoryController {
         return res.status(400).json(
           formatResponse(
             false,
-            `Category delete nahi ho sakti! Is category me ${category._count.products} products available hain.`
+            `Cannot delete category! This category contains ${category._count.products} products.`
           )
         );
       }
 
       await prisma.category.delete({ where: { id } });
 
-      return res.status(200).json(formatResponse(true, 'Category successfully delete ho gayi!'));
+      return res.status(200).json(formatResponse(true, 'Category deleted successfully!'));
     } catch (error) {
       next(error);
     }

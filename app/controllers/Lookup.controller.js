@@ -53,7 +53,7 @@ class LookupController {
       });
 
       if (existing) {
-        return res.status(400).json(formatResponse(false, 'Yeh option pehle se exist karta hai!'));
+        return res.status(400).json(formatResponse(false, 'This option already exists!'));
       }
 
       const created = await prisma.lookupOption.create({
@@ -63,7 +63,7 @@ class LookupController {
         }
       });
 
-      return res.status(201).json(formatResponse(true, 'Lookup option successfully add ho gaya! ✨', created));
+      return res.status(201).json(formatResponse(true, 'Lookup option added successfully! ✨', created));
     } catch (error) {
       next(error);
     }
@@ -77,7 +77,7 @@ class LookupController {
 
       const lookup = await prisma.lookupOption.findUnique({ where: { id } });
       if (!lookup) {
-        return res.status(404).json(formatResponse(false, 'Option nahi mila!'));
+        return res.status(404).json(formatResponse(false, 'Option not found!'));
       }
 
       const updated = await prisma.lookupOption.update({
@@ -88,7 +88,7 @@ class LookupController {
         }
       });
 
-      return res.status(200).json(formatResponse(true, 'Option successfully update ho gaya!', updated));
+      return res.status(200).json(formatResponse(true, 'Option updated successfully!', updated));
     } catch (error) {
       next(error);
     }
@@ -100,11 +100,11 @@ class LookupController {
       const id = parseInt(req.params.id);
       const lookup = await prisma.lookupOption.findUnique({ where: { id } });
       if (!lookup) {
-        return res.status(404).json(formatResponse(false, 'Option nahi mila!'));
+        return res.status(404).json(formatResponse(false, 'Option not found!'));
       }
 
       await prisma.lookupOption.delete({ where: { id } });
-      return res.status(200).json(formatResponse(true, 'Option successfully delete ho gaya!'));
+      return res.status(200).json(formatResponse(true, 'Option deleted successfully!'));
     } catch (error) {
       next(error);
     }

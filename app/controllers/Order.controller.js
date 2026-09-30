@@ -29,7 +29,7 @@ class OrderController {
       });
 
       if (!address) {
-        return res.status(404).json(formatResponse(false, 'Address nahi mila ya apka nahi hai!'));
+        return res.status(404).json(formatResponse(false, 'Address not found or does not belong to you!'));
       }
 
       // Get User Cart
@@ -46,7 +46,7 @@ class OrderController {
       });
 
       if (!cart || cart.items.length === 0) {
-        return res.status(400).json(formatResponse(false, 'Aapki Cart khaali (empty) hai!'));
+        return res.status(400).json(formatResponse(false, 'Your cart is empty!'));
       }
 
       // Calculate Total Amount & Check Stock Availability
@@ -61,7 +61,7 @@ class OrderController {
           return res.status(400).json(
             formatResponse(
               false,
-              `Product "${itemName}" ka stock kam hai (Available: ${availableStock}, Cart me: ${item.quantity}).`
+              `Product "${itemName}" is out of stock (Available: ${availableStock}, In cart: ${item.quantity}).`
             )
           );
         }
@@ -133,7 +133,7 @@ class OrderController {
       });
 
       return res.status(201).json(
-        formatResponse(true, 'Razorpay Order successfully create ho gaya!', {
+        formatResponse(true, 'Razorpay Order created successfully!', {
           order: dbOrder,
           razorpay: {
             orderId: razorpayOrder.id,
@@ -154,7 +154,7 @@ class OrderController {
       const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
 
       if (!razorpay_order_id || !razorpay_payment_id) {
-        return res.status(400).json(formatResponse(false, 'Razorpay order_id aur payment_id required hain.'));
+        return res.status(400).json(formatResponse(false, 'Razorpay order_id and payment_id are required.'));
       }
 
       // Check if testing with dummy payment ID in development mode
@@ -162,7 +162,7 @@ class OrderController {
 
       if (!isTestDummyMode) {
         if (!razorpay_signature) {
-          return res.status(400).json(formatResponse(false, 'razorpay_signature required hai.'));
+          return res.status(400).json(formatResponse(false, 'razorpay_signature is required.'));
         }
 
         // HMAC SHA256 Signature Verification
@@ -173,7 +173,7 @@ class OrderController {
 
         if (generatedSignature !== razorpay_signature) {
           Logger.error('Razorpay signature verification failed!');
-          return res.status(400).json(formatResponse(false, 'Payment signature verification fail ho gaya! Fraud alert.'));
+          return res.status(400).json(formatResponse(false, 'Payment signature verification failed!'));
         }
       }
 
@@ -184,7 +184,7 @@ class OrderController {
       });
 
       if (!order) {
-        return res.status(404).json(formatResponse(false, 'Order DB me nahi mila!'));
+        return res.status(404).json(formatResponse(false, 'Order not found in database!'));
       }
 
       // Update Order as PAID and PROCESSING
@@ -228,7 +228,7 @@ class OrderController {
 
       Logger.info(`Payment verified & Order #${order.orderNumber} successfully processed!`);
       return res.status(200).json(
-        formatResponse(true, 'Payment Verified! Aapka Order Successfully Place Ho Gaya. 🎉', updatedOrder)
+        formatResponse(true, 'Payment Verified! Your order has been placed successfully. 🎉', updatedOrder)
       );
     } catch (error) {
       next(error);
@@ -263,7 +263,7 @@ class OrderController {
       });
 
       if (!order) {
-        return res.status(404).json(formatResponse(false, 'Order nahi mila!'));
+        return res.status(404).json(formatResponse(false, 'Order not found!'));
       }
 
       return res.status(200).json(formatResponse(true, 'Order details fetched', order));
@@ -310,7 +310,7 @@ class OrderController {
       // Email Notification
       await EmailService.sendOrderStatusUpdate(updatedOrder.user.email, updatedOrder.orderNumber, orderStatus);
 
-      return res.status(200).json(formatResponse(true, `Order status update ho kar "${orderStatus}" ho gaya!`, updatedOrder));
+      return res.status(200).json(formatResponse(true, `Order status updated to "${orderStatus}" successfully!`, updatedOrder));
     } catch (error) {
       next(error);
     }
@@ -328,11 +328,11 @@ class OrderController {
       });
 
       if (!order) {
-        return res.status(404).json(formatResponse(false, 'Order nahi mila!'));
+        return res.status(404).json(formatResponse(false, 'Order not found!'));
       }
 
       if (['SHIPPED', 'DELIVERED', 'CANCELLED'].includes(order.orderStatus)) {
-        return res.status(400).json(formatResponse(false, `Order ko ab cancel nahi kiya ja sakta kyunki status "${order.orderStatus}" hai.`));
+        return res.status(400).json(formatResponse(false, `Order cannot be cancelled because its status is "${order.orderStatus}".`));
       }
 
       // Restore Product & Variant Stock if order was paid or processing
@@ -358,7 +358,7 @@ class OrderController {
         data: { orderStatus: 'CANCELLED' }
       });
 
-      return res.status(200).json(formatResponse(true, 'Order successfully cancel ho gaya aur stock restore ho gaya!', cancelledOrder));
+      return res.status(200).json(formatResponse(true, 'Order cancelled successfully and stock restored!', cancelledOrder));
     } catch (error) {
       next(error);
     }

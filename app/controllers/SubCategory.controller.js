@@ -52,20 +52,20 @@ class SubCategoryController {
 
       if (!name || !categoryId) {
         deleteUploadedFile(req.file);
-        return res.status(400).json(formatResponse(false, 'Subcategory name aur categoryId dono zaroori hain.'));
+        return res.status(400).json(formatResponse(false, 'Both subcategory name and categoryId are required.'));
       }
 
       const parsedCategoryId = parseInt(categoryId);
       const parentCategory = await prisma.category.findUnique({ where: { id: parsedCategoryId } });
       if (!parentCategory) {
         deleteUploadedFile(req.file);
-        return res.status(400).json(formatResponse(false, 'Parent Category nahi mili!'));
+        return res.status(400).json(formatResponse(false, 'Parent Category not found!'));
       }
 
       const existingSub = await prisma.subCategory.findUnique({ where: { name } });
       if (existingSub) {
         deleteUploadedFile(req.file);
-        return res.status(400).json(formatResponse(false, 'Is name ki subcategory pehle se exist karti hai!'));
+        return res.status(400).json(formatResponse(false, 'A subcategory with this name already exists!'));
       }
 
       const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
@@ -80,7 +80,7 @@ class SubCategoryController {
         include: { category: { select: { id: true, name: true } } }
       });
 
-      return res.status(201).json(formatResponse(true, 'Subcategory successfully create ho gayi! 🎉', subCategory));
+      return res.status(201).json(formatResponse(true, 'Subcategory created successfully! 🎉', subCategory));
     } catch (error) {
       deleteUploadedFile(req.file);
       next(error);
@@ -96,7 +96,7 @@ class SubCategoryController {
       const subCategory = await prisma.subCategory.findUnique({ where: { id } });
       if (!subCategory) {
         deleteUploadedFile(req.file);
-        return res.status(404).json(formatResponse(false, 'Subcategory nahi mili!'));
+        return res.status(404).json(formatResponse(false, 'Subcategory not found!'));
       }
 
       const updateData = {};
@@ -108,7 +108,7 @@ class SubCategoryController {
         const parentCategory = await prisma.category.findUnique({ where: { id: pId } });
         if (!parentCategory) {
           deleteUploadedFile(req.file);
-          return res.status(400).json(formatResponse(false, 'Parent Category nahi mili!'));
+          return res.status(400).json(formatResponse(false, 'Parent Category not found!'));
         }
         updateData.categoryId = pId;
       }
@@ -119,7 +119,7 @@ class SubCategoryController {
         include: { category: { select: { id: true, name: true } } }
       });
 
-      return res.status(200).json(formatResponse(true, 'Subcategory successfully update ho gayi!', updatedSub));
+      return res.status(200).json(formatResponse(true, 'Subcategory updated successfully!', updatedSub));
     } catch (error) {
       deleteUploadedFile(req.file);
       next(error);
@@ -137,21 +137,21 @@ class SubCategoryController {
       });
 
       if (!subCategory) {
-        return res.status(404).json(formatResponse(false, 'Subcategory nahi mili!'));
+        return res.status(404).json(formatResponse(false, 'Subcategory not found!'));
       }
 
       if (subCategory._count.products > 0) {
         return res.status(400).json(
           formatResponse(
             false,
-            `Subcategory delete nahi ho sakti! Isme ${subCategory._count.products} products available hain.`
+            `Cannot delete subcategory! It contains ${subCategory._count.products} products.`
           )
         );
       }
 
       await prisma.subCategory.delete({ where: { id } });
 
-      return res.status(200).json(formatResponse(true, 'Subcategory successfully delete ho gayi!'));
+      return res.status(200).json(formatResponse(true, 'Subcategory deleted successfully!'));
     } catch (error) {
       next(error);
     }

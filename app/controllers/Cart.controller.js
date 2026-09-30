@@ -97,7 +97,7 @@ class CartController {
 
       const qty = quantity ? parseInt(quantity) : 1;
       if (qty <= 0) {
-        return res.status(400).json(formatResponse(false, 'Quantity 1 ya usse zyada honi chahiye.'));
+        return res.status(400).json(formatResponse(false, 'Quantity must be 1 or greater.'));
       }
 
       const parsedProductId = parseInt(productId);
@@ -109,7 +109,7 @@ class CartController {
       });
 
       if (!product) {
-        return res.status(404).json(formatResponse(false, 'Product nahi mila!'));
+        return res.status(404).json(formatResponse(false, 'Product not found!'));
       }
 
       // Check if variant exists and matches product if specified
@@ -119,7 +119,7 @@ class CartController {
           where: { id: parsedVariantId, productId: parsedProductId }
         });
         if (!variant) {
-          return res.status(404).json(formatResponse(false, 'Product Variant nahi mila!'));
+          return res.status(404).json(formatResponse(false, 'Product variant not found!'));
         }
       }
 
@@ -143,7 +143,7 @@ class CartController {
         return res.status(400).json(
           formatResponse(
             false,
-            `Stock limit exceeded! Is item ka sirf ${availableStock} quantity available hai.`
+            `Stock limit exceeded! Only ${availableStock} units available.`
           )
         );
       }
@@ -164,7 +164,7 @@ class CartController {
         });
       }
 
-      return res.status(200).json(formatResponse(true, 'Product cart me add ho gaya! 🛒'));
+      return res.status(200).json(formatResponse(true, 'Product added to cart! 🛒'));
     } catch (error) {
       next(error);
     }
@@ -179,7 +179,7 @@ class CartController {
 
       const qty = parseInt(quantity);
       if (qty <= 0) {
-        return res.status(400).json(formatResponse(false, 'Quantity 1 ya usse zyada honi chahiye.'));
+        return res.status(400).json(formatResponse(false, 'Quantity must be 1 or greater.'));
       }
 
       const cart = await CartController.getOrCreateCart(userId);
@@ -189,7 +189,7 @@ class CartController {
       });
 
       if (!cartItem) {
-        return res.status(404).json(formatResponse(false, 'Cart item nahi mila!'));
+        return res.status(404).json(formatResponse(false, 'Cart item not found!'));
       }
 
       const availableStock = cartItem.variant ? cartItem.variant.stock : cartItem.product.stock;
@@ -197,7 +197,7 @@ class CartController {
       // Stock Check
       if (qty > availableStock) {
         return res.status(400).json(
-          formatResponse(false, `Stock limit exceeded! Max ${availableStock} items available hain.`)
+          formatResponse(false, `Stock limit exceeded! Maximum ${availableStock} units available.`)
         );
       }
 
@@ -206,7 +206,7 @@ class CartController {
         data: { quantity: qty }
       });
 
-      return res.status(200).json(formatResponse(true, 'Cart item quantity update ho gayi!'));
+      return res.status(200).json(formatResponse(true, 'Cart item quantity updated!'));
     } catch (error) {
       next(error);
     }
@@ -224,12 +224,12 @@ class CartController {
       });
 
       if (!cartItem) {
-        return res.status(404).json(formatResponse(false, 'Cart item nahi mila!'));
+        return res.status(404).json(formatResponse(false, 'Cart item not found!'));
       }
 
       await prisma.cartItem.delete({ where: { id: itemId } });
 
-      return res.status(200).json(formatResponse(true, 'Item cart se remove ho gaya!'));
+      return res.status(200).json(formatResponse(true, 'Item removed from cart!'));
     } catch (error) {
       next(error);
     }
@@ -245,7 +245,7 @@ class CartController {
         where: { cartId: cart.id }
       });
 
-      return res.status(200).json(formatResponse(true, 'Cart clear ho gayi!'));
+      return res.status(200).json(formatResponse(true, 'Cart cleared successfully!'));
     } catch (error) {
       next(error);
     }

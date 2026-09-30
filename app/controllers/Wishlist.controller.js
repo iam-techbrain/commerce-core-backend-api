@@ -25,7 +25,7 @@ class WishlistController {
       const { productId } = req.body;
 
       if (!productId) {
-        return res.status(400).json(formatResponse(false, 'productId required hai.'));
+        return res.status(400).json(formatResponse(false, 'productId is required.'));
       }
 
       const product = await prisma.product.findUnique({
@@ -33,7 +33,7 @@ class WishlistController {
       });
 
       if (!product) {
-        return res.status(404).json(formatResponse(false, 'Product nahi mila!'));
+        return res.status(404).json(formatResponse(false, 'Product not found!'));
       }
 
       const existingWishlist = await prisma.wishlist.findUnique({
@@ -48,14 +48,14 @@ class WishlistController {
       if (existingWishlist) {
         // Remove from Wishlist
         await prisma.wishlist.delete({ where: { id: existingWishlist.id } });
-        return res.status(200).json(formatResponse(true, 'Product wishlist se remove ho gaya! ❤️', { isWishlisted: false }));
+        return res.status(200).json(formatResponse(true, 'Product removed from wishlist! ❤️', { isWishlisted: false }));
       } else {
         // Add to Wishlist
         const newWishlist = await prisma.wishlist.create({
           data: { userId, productId: parseInt(productId) },
           include: { product: true }
         });
-        return res.status(201).json(formatResponse(true, 'Product wishlist me add ho gaya! ❤️', { isWishlisted: true, wishlist: newWishlist }));
+        return res.status(201).json(formatResponse(true, 'Product added to wishlist! ❤️', { isWishlisted: true, wishlist: newWishlist }));
       }
     } catch (error) {
       next(error);

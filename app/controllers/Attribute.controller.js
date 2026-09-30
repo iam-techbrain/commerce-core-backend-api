@@ -41,7 +41,7 @@ class AttributeController {
       });
 
       if (existing) {
-        return res.status(400).json(formatResponse(false, `Attribute "${trimmedName}" pehle se exist karta hai!`));
+        return res.status(400).json(formatResponse(false, `Attribute "${trimmedName}" already exists!`));
       }
 
       const attribute = await prisma.attribute.create({
@@ -75,7 +75,7 @@ class AttributeController {
       });
 
       return res.status(201).json(
-        formatResponse(true, `Master Attribute "${trimmedName}" successfully create ho gaya! 🎉`, fullAttribute)
+        formatResponse(true, `Master Attribute "${trimmedName}" created successfully! 🎉`, fullAttribute)
       );
     } catch (error) {
       next(error);
@@ -89,7 +89,7 @@ class AttributeController {
       const { value, colorCode } = req.body;
 
       if (!value || !value.trim()) {
-        return res.status(400).json(formatResponse(false, 'Value required hai (jaise: Red, UK 8, 10kg).'));
+        return res.status(400).json(formatResponse(false, 'Value is required (e.g. Red, UK 8, 10kg).'));
       }
 
       const trimmedValue = value.trim();
@@ -99,7 +99,7 @@ class AttributeController {
       });
 
       if (!attribute) {
-        return res.status(404).json(formatResponse(false, 'Attribute nahi mila!'));
+        return res.status(404).json(formatResponse(false, 'Attribute not found!'));
       }
 
       const existingVal = await prisma.attributeValue.findUnique({
@@ -112,7 +112,7 @@ class AttributeController {
       });
 
       if (existingVal) {
-        return res.status(400).json(formatResponse(false, `Value "${trimmedValue}" is attribute me pehle se exist karti hai!`));
+        return res.status(400).json(formatResponse(false, `Value "${trimmedValue}" already exists for this attribute!`));
       }
 
       const createdValue = await prisma.attributeValue.create({
@@ -124,7 +124,7 @@ class AttributeController {
       });
 
       return res.status(201).json(
-        formatResponse(true, `Value "${trimmedValue}" successfully add ho gayi!`, createdValue)
+        formatResponse(true, `Value "${trimmedValue}" added successfully!`, createdValue)
       );
     } catch (error) {
       next(error);
@@ -141,14 +141,14 @@ class AttributeController {
       });
 
       if (!val) {
-        return res.status(404).json(formatResponse(false, 'Attribute value nahi mili!'));
+        return res.status(404).json(formatResponse(false, 'Attribute value not found!'));
       }
 
       await prisma.attributeValue.delete({
         where: { id: valueId }
       });
 
-      return res.status(200).json(formatResponse(true, 'Attribute value successfully delete ho gayi!'));
+      return res.status(200).json(formatResponse(true, 'Attribute value deleted successfully!'));
     } catch (error) {
       next(error);
     }
@@ -164,14 +164,14 @@ class AttributeController {
       });
 
       if (!attr) {
-        return res.status(404).json(formatResponse(false, 'Attribute nahi mila!'));
+        return res.status(404).json(formatResponse(false, 'Attribute not found!'));
       }
 
       await prisma.attribute.delete({
         where: { id }
       });
 
-      return res.status(200).json(formatResponse(true, `Attribute "${attr.name}" successfully delete ho gaya!`));
+      return res.status(200).json(formatResponse(true, `Attribute "${attr.name}" deleted successfully!`));
     } catch (error) {
       next(error);
     }
