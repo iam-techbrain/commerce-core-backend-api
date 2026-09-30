@@ -1,3 +1,5 @@
+const fs = require('fs');
+const path = require('path');
 const { prisma } = require('../database/Prisma.database');
 const { formatResponse, deleteUploadedFile } = require('../helpers/App.helper');
 
@@ -38,24 +40,30 @@ class BrandController {
   static async create(req, res, next) {
     try {
       const { name, description } = req.body;
+      const cleanName = (name || '').trim();
 
-      if (!name) {
+      if (!cleanName) {
         deleteUploadedFile(req.file);
         return res.status(400).json(formatResponse(false, 'Brand name is required.'));
       }
 
-      const existingBrand = await prisma.brand.findUnique({ where: { name } });
-      if (existingBrand) {
+      // Case-insensitive duplicate brand check
+      const allBrands = await prisma.brand.findMany({ select: { id: true, name: true } });
+      const duplicateBrand = allBrands.find(
+        (b) => b.name.trim().toLowerCase() === cleanName.toLowerCase()
+      );
+
+      if (duplicateBrand) {
         deleteUploadedFile(req.file);
-        return res.status(400).json(formatResponse(false, 'A brand with this name already exists!'));
+        return res.status(400).json(formatResponse(false, `A brand with the name "${duplicateBrand.name}" already exists!`));
       }
 
       const logoUrl = req.file ? (req.file.relativeUrl || `/uploads/brands/${req.file.filename}`) : null;
 
       const brand = await prisma.brand.create({
         data: {
-          name,
-          description,
+          name: cleanName,
+          description: description ? description.trim() : null,
           logoUrl
         }
       });
@@ -80,8 +88,31 @@ class BrandController {
       }
 
       const updateData = {};
-      if (name) updateData.name = name;
-      if (description !== undefined) updateData.description = description;
+      if (name !== undefined) {
+        const cleanName = name.trim();
+        if (!cleanName) {
+          deleteUploadedFile(req.file);
+          return res.status(400).json(formatResponse(false, 'Brand name cannot be empty.'));
+        }
+
+        // Case-insensitive duplicate check excluding current brand
+        const allBrands = await prisma.brand.findMany({
+          where: { id: { not: id } },
+          select: { id: true, name: true }
+        });
+        const duplicateBrand = allBrands.find(
+          (b) => b.name.trim().toLowerCase() === cleanName.toLowerCase()
+        );
+
+        if (duplicateBrand) {
+          deleteUploadedFile(req.file);
+          return res.status(400).json(formatResponse(false, `Another brand named "${duplicateBrand.name}" already exists!`));
+        }
+
+        updateData.name = cleanName;
+      }
+
+      if (description !== undefined) updateData.description = description ? description.trim() : null;
       if (req.file) {
         updateData.logoUrl = req.file.relativeUrl || `/uploads/brands/${req.file.filename}`;
       } else if (req.body.logoUrl !== undefined) {
@@ -121,6 +152,14 @@ class BrandController {
             `Cannot delete brand! This brand has ${brand._count.products} products attached. Please reassign or delete those products first.`
           )
         );
+      }
+
+      // Delete associated logo file if exists
+      if (brand.logoUrl && brand.logoUrl.startsWith('/uploads/brands/')) {
+        const filePath = path.join(__dirname, '../../public', brand.logoUrl);
+        if (fs.existsSync(filePath)) {
+          try { fs.unlinkSync(filePath); } catch (e) {}
+        }
       }
 
       await prisma.brand.delete({ where: { id } });

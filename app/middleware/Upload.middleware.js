@@ -57,7 +57,7 @@ const resolveSubfolder = (req, explicitFolder) => {
  * Compress a single image file with Sharp to WebP (~20 KB - 50 KB target)
  * and save it directly in the targeted subfolder (e.g. uploads/brands/)
  */
-const compressSingleFile = async (file, targetSubfolder = '') => {
+const compressSingleFile = async (file, targetSubfolder = '', customBaseName = '') => {
   if (!file || !file.buffer) return file;
 
   const targetDir = targetSubfolder
@@ -67,30 +67,38 @@ const compressSingleFile = async (file, targetSubfolder = '') => {
   ensureDirExists(targetDir);
 
   const ext = path.extname(file.originalname).toLowerCase();
-  const baseName = path.basename(file.originalname, ext).replace(/[^a-zA-Z0-9_-]/g, '');
-  const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E6);
+  let baseName = customBaseName
+    ? customBaseName.toLowerCase().replace(/[^a-z0-9_-]/g, '-').replace(/-+/g, '-')
+    : path.basename(file.originalname, ext).replace(/[^a-zA-Z0-9_-]/g, '');
+
+  if (!baseName) baseName = 'logo';
+
+  // For brands, save directly as <brandname>.webp (clean and memorable!)
+  const isBrand = targetSubfolder === 'brands';
+  const filename = isBrand
+    ? `${baseName}.webp`
+    : `${file.fieldname || 'img'}-${baseName}-${Date.now()}-${Math.round(Math.random() * 1E6)}.webp`;
+
+  const outputPath = path.join(targetDir, filename);
 
   // SVG files are vectors; don't rasterize them, write directly
   if (file.mimetype === 'image/svg+xml' || ext === '.svg') {
-    const filename = `${file.fieldname || 'upload'}-${baseName}-${uniqueSuffix}.svg`;
-    const outputPath = path.join(targetDir, filename);
-    await fs.promises.writeFile(outputPath, file.buffer);
-    const stats = fs.statSync(outputPath);
+    const svgFilename = isBrand ? `${baseName}.svg` : `${file.fieldname || 'upload'}-${baseName}-${Date.now()}.svg`;
+    const svgPath = path.join(targetDir, svgFilename);
+    await fs.promises.writeFile(svgPath, file.buffer);
+    const stats = fs.statSync(svgPath);
 
-    file.filename = filename;
-    file.path = outputPath;
+    file.filename = svgFilename;
+    file.path = svgPath;
     file.destination = targetDir;
     file.subfolder = targetSubfolder;
-    file.relativeUrl = targetSubfolder ? `/uploads/${targetSubfolder}/${filename}` : `/uploads/${filename}`;
+    file.relativeUrl = targetSubfolder ? `/uploads/${targetSubfolder}/${svgFilename}` : `/uploads/${svgFilename}`;
     file.size = stats.size;
     return file;
   }
 
   // All bitmap images (JPG, PNG, WEBP, AVIF, etc.):
   // Resize max dimensions to 1000px, WebP quality 78 -> reduces size down to ~20-50 KB!
-  const filename = `${file.fieldname || 'img'}-${baseName}-${uniqueSuffix}.webp`;
-  const outputPath = path.join(targetDir, filename);
-
   await sharp(file.buffer)
     .resize({
       width: 1000,
@@ -122,14 +130,15 @@ const createCompressMiddleware = (subfolder) => {
   return async (req, res, next) => {
     try {
       const folder = resolveSubfolder(req, subfolder);
+      const customBaseName = folder === 'brands' && req.body && req.body.name ? req.body.name : '';
 
       if (req.file) {
-        await compressSingleFile(req.file, folder);
+        await compressSingleFile(req.file, folder, customBaseName);
       }
       if (req.files) {
         if (Array.isArray(req.files)) {
           for (const f of req.files) {
-            await compressSingleFile(f, folder);
+            await compressSingleFile(f, folder, customBaseName);
           }
         } else if (typeof req.files === 'object') {
           for (const field of Object.keys(req.files)) {
